@@ -4,7 +4,7 @@
 #include <string.h>
 
 LogMessageCallback logCallback;
-char endianness;
+//char endianness;
 int GlobalLogLevel;
 
 int Img3DecryptLast = TRUE; /* FALSE for <= 7a341, TRUE for >= 7c144 */
@@ -21,7 +21,7 @@ void defaultCallback(const char* Message) {
 }
 
 void init_libxpwn(int *argc, char *argv[]) {
-    __unused int i, j, n = *argc;
+    int i, n = *argc;
     for (i = 0; i < n; i++) {
         if (!strcmp(argv[i], "--old-img3-decrypt")) {
             n--;

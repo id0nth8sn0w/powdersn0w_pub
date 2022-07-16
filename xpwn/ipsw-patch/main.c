@@ -45,7 +45,7 @@ static AbstractFile* openRoot(void** buffer, size_t* rootSize) {
             GetTempFileName(tmpFilePath, "root", 0, tmpFileBuffer);
             CloseHandle(CreateFile(tmpFilePath, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_DELETE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_TEMPORARY, NULL));
 #else
-            strcpy(tmpFileBuffer, "/tmp/rootXXXXXX");
+            strcpy(tmpFileBuffer, "./rootXXXXXX");
             close(mkstemp(tmpFileBuffer));
             FILE* tFile = fopen(tmpFileBuffer, "wb");
             fclose(tFile);
@@ -978,7 +978,7 @@ int main(int argc, char* argv[]) {
         StringValue* bootstrap = (StringValue*) getValueByKey(systemPackage, "bootstrap");
         StringValue* package = (StringValue*) getValueByKey(systemPackage, "package");
         
-        if(bootstrap) {
+        if(bootstrap && jailbreak) {
             bootstrapPath = bootstrap->value;
             AbstractFile* bootstrapFile = createAbstractFileFromFile(fopen(bootstrapPath, "rb"));
             if(bootstrapFile) {

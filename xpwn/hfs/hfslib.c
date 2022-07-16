@@ -779,7 +779,6 @@ void displayFolder2(HFSCatalogNodeID folderID, Volume* volume, const char *path,
     CatalogRecordList* list;
     CatalogRecordList* theList;
     HFSPlusCatalogFolder* folder;
-    __unused HFSPlusCatalogFile* file;
     time_t fileTime;
     struct tm *date;
     

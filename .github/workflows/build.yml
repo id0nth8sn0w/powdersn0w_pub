@@ -1,0 +1,28 @@
+name: Compile ipsw
+on: [push]
+jobs:
+  xpwn-linux:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run compile script
+        run: |
+          cd ./xpwn
+          ./compile.sh
+          mv bin/ipsw_linux bin/powdersn0w_linux
+          ./compile.sh daibutsu
+          mv bin/ipsw_linux bin/daibutsu_linux
+          mv bin/ ..
+          cd ..
+
+      - name: Zip files
+        run: zip -r powdersn0w_linux.zip bin/
+
+      - name: Update latest release
+        uses: pyTooling/Actions/releaser@main
+        with:
+          tag: latest
+          rm: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: powdersn0w_linux.zip

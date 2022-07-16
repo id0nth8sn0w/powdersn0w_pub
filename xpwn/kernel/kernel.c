@@ -1,3 +1,7 @@
+#ifdef __linux__
+# define _GNU_SOURCE
+#endif
+
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
@@ -47,7 +51,7 @@ static size_t kernel_size = 0;
 static int majorVer = 0;
 static int minorVer = 0;
 
-__unused static int write8(void* buf, size_t bufsize, uint32_t addr, uint8_t val)
+static int write8(void* buf, size_t bufsize, uint32_t addr, uint8_t val)
 {
     if(addr+1 > bufsize) {
         ERROR("[%s] overflow!", __FUNCTION__);
@@ -57,7 +61,7 @@ __unused static int write8(void* buf, size_t bufsize, uint32_t addr, uint8_t val
     return 0;
 }
 
-__unused static int write16(void* buf, size_t bufsize, uint32_t addr, uint16_t val)
+static int write16(void* buf, size_t bufsize, uint32_t addr, uint16_t val)
 {
     if(addr+2 > bufsize) {
         ERROR("[%s] overflow!", __FUNCTION__);
@@ -67,7 +71,7 @@ __unused static int write16(void* buf, size_t bufsize, uint32_t addr, uint16_t v
     return 0;
 }
 
-__unused static int write32(void* buf, size_t bufsize, uint32_t addr, uint32_t val)
+static int write32(void* buf, size_t bufsize, uint32_t addr, uint32_t val)
 {
     if(addr+4 > bufsize) {
         ERROR("[%s] overflow!", __FUNCTION__);
@@ -87,8 +91,8 @@ static int init_kernel(unsigned char* buf, struct macho_address **addr)
     memset(kaddr, '\0', sizeof(struct macho_address));
     
     int i = 0;
-    __unused uint32_t max = 0;
-    __unused uint32_t min = -1;
+    uint32_t max = 0;
+    uint32_t min = -1;
     
     const struct mach_header *hdr = (struct mach_header *)buf;
     DEBUGLOG("[%s] found magic: %x", __FUNCTION__, hdr->magic);
@@ -1079,7 +1083,7 @@ end:
 }
 
 // taig
-__unused static int hook_sb_evaluate(unsigned char* buf, struct macho_address *kext, struct macho_address *kaddr,
+static int hook_sb_evaluate(unsigned char* buf, struct macho_address *kext, struct macho_address *kaddr,
                             struct sandbox_offset *offset, struct helper_offset *helper)
 {
     uint32_t backup = *(uint32_t*)((buf + kext->text_buf_base) + offset->sb_evaluate);
@@ -1279,8 +1283,8 @@ int patchKernel(AbstractFile* inFile, AbstractFile* outFile)
 {
     
     bool supported = false;
-    __unused int i = 0;
-    __unused int flags = PATCH_NONE;
+    int i = 0;
+    int flags = PATCH_NONE;
     unsigned char* buf = NULL;
     size_t sz = 0;
     

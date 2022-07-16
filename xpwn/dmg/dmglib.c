@@ -318,7 +318,6 @@ int convertToDMG(AbstractFile* abstractIn, AbstractFile* abstractOut) {
     
     if(DDM->sbSig == DRIVER_DESCRIPTOR_SIGNATURE) {
         BlockSize = DDM->sbBlkSize;
-        __unused int pNum = writeDriverDescriptorMap(-1, abstractOut, DDM, BlockSize, &CRCProxy, (void*) (&dataForkToken), &resources);
         free(DDM);
         
         printf("Processing partition map...\n"); fflush(stdout);

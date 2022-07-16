@@ -1,3 +1,7 @@
+#ifdef __linux__
+# define _GNU_SOURCE
+#endif
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -5,19 +9,19 @@
 
 #include <patchfinder.h>
 
-__unused static uint32_t bit_range(uint32_t x, int start, int end)
+static uint32_t bit_range(uint32_t x, int start, int end)
 {
     x = (x << (31 - start)) >> (31 - start);
     x = (x >> end);
     return x;
 }
 
-__unused static uint32_t ror(uint32_t x, int places)
+static uint32_t ror(uint32_t x, int places)
 {
     return (x >> places) | (x << (32 - places));
 }
 
-__unused static int thumb_expand_imm_c(uint16_t imm12)
+static int thumb_expand_imm_c(uint16_t imm12)
 {
     if(bit_range(imm12, 11, 10) == 0)
     {
@@ -46,7 +50,7 @@ int insn_is_32bit(uint16_t* i)
     return (*i & 0xe000) == 0xe000 && (*i & 0x1800) != 0x0;
 }
 
-__unused static int insn_is_bl(uint16_t* i)
+static int insn_is_bl(uint16_t* i)
 {
     if((*i & 0xf800) == 0xf000 && (*(i + 1) & 0xd000) == 0xd000)
         return 1;
@@ -56,7 +60,7 @@ __unused static int insn_is_bl(uint16_t* i)
         return 0;
 }
 
-__unused static uint32_t insn_bl_imm32(uint16_t* i)
+static uint32_t insn_bl_imm32(uint16_t* i)
 {
     uint16_t insn0 = *i;
     uint16_t insn1 = *(i + 1);
@@ -71,12 +75,12 @@ __unused static uint32_t insn_bl_imm32(uint16_t* i)
     return imm32;
 }
 
-__unused static int insn_is_b_conditional(uint16_t* i)
+static int insn_is_b_conditional(uint16_t* i)
 {
     return (*i & 0xF000) == 0xD000 && (*i & 0x0F00) != 0x0F00 && (*i & 0x0F00) != 0xE;
 }
 
-__unused static int insn_is_b_unconditional(uint16_t* i)
+static int insn_is_b_unconditional(uint16_t* i)
 {
     if((*i & 0xF800) == 0xE000)
         return 1;
@@ -86,12 +90,12 @@ __unused static int insn_is_b_unconditional(uint16_t* i)
         return 0;
 }
 
-__unused static int insn_is_ldr_literal(uint16_t* i)
+static int insn_is_ldr_literal(uint16_t* i)
 {
     return (*i & 0xF800) == 0x4800 || (*i & 0xFF7F) == 0xF85F;
 }
 
-__unused static int insn_ldr_literal_rt(uint16_t* i)
+static int insn_ldr_literal_rt(uint16_t* i)
 {
     if((*i & 0xF800) == 0x4800)
         return (*i >> 8) & 7;
@@ -101,7 +105,7 @@ __unused static int insn_ldr_literal_rt(uint16_t* i)
         return -1;
 }
 
-__unused static int insn_ldr_literal_imm(uint16_t* i)
+static int insn_ldr_literal_imm(uint16_t* i)
 {
     if((*i & 0xF800) == 0x4800)
         return (*i & 0xFF) << 2;
@@ -112,51 +116,51 @@ __unused static int insn_ldr_literal_imm(uint16_t* i)
 }
 
 // TODO: More encodings
-__unused static int insn_is_ldr_imm(uint16_t* i)
+static int insn_is_ldr_imm(uint16_t* i)
 {
     uint8_t opA = bit_range(*i, 15, 12);
     uint8_t opB = bit_range(*i, 11, 9);
-    
+
     return opA == 6 && (opB & 4) == 4;
 }
 
-__unused static int insn_ldr_imm_rt(uint16_t* i)
+static int insn_ldr_imm_rt(uint16_t* i)
 {
     return (*i & 7);
 }
 
-__unused static int insn_ldr_imm_rn(uint16_t* i)
+static int insn_ldr_imm_rn(uint16_t* i)
 {
     return ((*i >> 3) & 7);
 }
 
-__unused static int insn_ldr_imm_imm(uint16_t* i)
+static int insn_ldr_imm_imm(uint16_t* i)
 {
     return ((*i >> 6) & 0x1F);
 }
 
 // TODO: More encodings
-__unused static int insn_is_ldrb_imm(uint16_t* i)
+static int insn_is_ldrb_imm(uint16_t* i)
 {
     return (*i & 0xF800) == 0x7800;
 }
 
-__unused static int insn_ldrb_imm_rt(uint16_t* i)
+static int insn_ldrb_imm_rt(uint16_t* i)
 {
     return (*i & 7);
 }
 
-__unused static int insn_ldrb_imm_rn(uint16_t* i)
+static int insn_ldrb_imm_rn(uint16_t* i)
 {
     return ((*i >> 3) & 7);
 }
 
-__unused static int insn_ldrb_imm_imm(uint16_t* i)
+static int insn_ldrb_imm_imm(uint16_t* i)
 {
     return ((*i >> 6) & 0x1F);
 }
 
-__unused __unused static int insn_is_ldr_reg(uint16_t* i)
+static int insn_is_ldr_reg(uint16_t* i)
 {
     if((*i & 0xFE00) == 0x5800)
         return 1;
@@ -166,7 +170,7 @@ __unused __unused static int insn_is_ldr_reg(uint16_t* i)
         return 0;
 }
 
-__unused __unused static int insn_ldr_reg_rn(uint16_t* i)
+static int insn_ldr_reg_rn(uint16_t* i)
 {
     if((*i & 0xFE00) == 0x5800)
         return (*i >> 3) & 0x7;
@@ -196,7 +200,7 @@ int insn_ldr_reg_rm(uint16_t* i)
         return 0;
 }
 
-__unused __unused static int insn_ldr_reg_lsl(uint16_t* i)
+static int insn_ldr_reg_lsl(uint16_t* i)
 {
     if((*i & 0xFE00) == 0x5800)
         return 0;
@@ -206,7 +210,7 @@ __unused __unused static int insn_ldr_reg_lsl(uint16_t* i)
         return 0;
 }
 
-__unused static int insn_is_add_reg(uint16_t* i)
+static int insn_is_add_reg(uint16_t* i)
 {
     if((*i & 0xFE00) == 0x1800)
         return 1;
@@ -218,7 +222,7 @@ __unused static int insn_is_add_reg(uint16_t* i)
         return 0;
 }
 
-__unused static int insn_add_reg_rd(uint16_t* i)
+static int insn_add_reg_rd(uint16_t* i)
 {
     if((*i & 0xFE00) == 0x1800)
         return (*i & 7);
@@ -230,7 +234,7 @@ __unused static int insn_add_reg_rd(uint16_t* i)
         return 0;
 }
 
-__unused static int insn_add_reg_rn(uint16_t* i)
+static int insn_add_reg_rn(uint16_t* i)
 {
     if((*i & 0xFE00) == 0x1800)
         return ((*i >> 3) & 7);
@@ -242,7 +246,7 @@ __unused static int insn_add_reg_rn(uint16_t* i)
         return 0;
 }
 
-__unused static int insn_add_reg_rm(uint16_t* i)
+static int insn_add_reg_rm(uint16_t* i)
 {
     if((*i & 0xFE00) == 0x1800)
         return (*i >> 6) & 7;
@@ -254,22 +258,22 @@ __unused static int insn_add_reg_rm(uint16_t* i)
         return 0;
 }
 
-__unused static int insn_is_movt(uint16_t* i)
+static int insn_is_movt(uint16_t* i)
 {
     return (*i & 0xFBF0) == 0xF2C0 && (*(i + 1) & 0x8000) == 0;
 }
 
-__unused static int insn_movt_rd(uint16_t* i)
+static int insn_movt_rd(uint16_t* i)
 {
     return (*(i + 1) >> 8) & 0xF;
 }
 
-__unused static int insn_movt_imm(uint16_t* i)
+static int insn_movt_imm(uint16_t* i)
 {
     return ((*i & 0xF) << 12) | ((*i & 0x0400) << 1) | ((*(i + 1) & 0x7000) >> 4) | (*(i + 1) & 0xFF);
 }
 
-__unused static int insn_is_mov_imm(uint16_t* i)
+static int insn_is_mov_imm(uint16_t* i)
 {
     if((*i & 0xF800) == 0x2000)
         return 1;
@@ -281,7 +285,7 @@ __unused static int insn_is_mov_imm(uint16_t* i)
         return 0;
 }
 
-__unused static int insn_mov_imm_rd(uint16_t* i)
+static int insn_mov_imm_rd(uint16_t* i)
 {
     if((*i & 0xF800) == 0x2000)
         return (*i >> 8) & 7;
@@ -293,7 +297,7 @@ __unused static int insn_mov_imm_rd(uint16_t* i)
         return 0;
 }
 
-__unused static int insn_mov_imm_imm(uint16_t* i)
+static int insn_mov_imm_imm(uint16_t* i)
 {
     if((*i & 0xF800) == 0x2000)
         return *i & 0xF;
@@ -305,7 +309,7 @@ __unused static int insn_mov_imm_imm(uint16_t* i)
         return 0;
 }
 
-__unused __unused static int insn_is_cmp_imm(uint16_t* i)
+static int insn_is_cmp_imm(uint16_t* i)
 {
     if((*i & 0xF800) == 0x2800)
         return 1;
@@ -315,7 +319,7 @@ __unused __unused static int insn_is_cmp_imm(uint16_t* i)
         return 0;
 }
 
-__unused __unused static int insn_cmp_imm_rn(uint16_t* i)
+static int insn_cmp_imm_rn(uint16_t* i)
 {
     if((*i & 0xF800) == 0x2800)
         return (*i >> 8) & 7;
@@ -325,7 +329,7 @@ __unused __unused static int insn_cmp_imm_rn(uint16_t* i)
         return 0;
 }
 
-__unused __unused static int insn_cmp_imm_imm(uint16_t* i)
+static int insn_cmp_imm_imm(uint16_t* i)
 {
     if((*i & 0xF800) == 0x2800)
         return *i & 0xFF;
@@ -335,27 +339,27 @@ __unused __unused static int insn_cmp_imm_imm(uint16_t* i)
         return 0;
 }
 
-__unused __unused static int insn_is_and_imm(uint16_t* i)
+static int insn_is_and_imm(uint16_t* i)
 {
     return (*i & 0xFBE0) == 0xF000 && (*(i + 1) & 0x8000) == 0;
 }
 
-__unused __unused static int insn_and_imm_rn(uint16_t* i)
+static int insn_and_imm_rn(uint16_t* i)
 {
     return *i & 0xF;
 }
 
-__unused __unused static int insn_and_imm_rd(uint16_t* i)
+static int insn_and_imm_rd(uint16_t* i)
 {
     return (*(i + 1) >> 8) & 0xF;
 }
 
-__unused __unused static int insn_and_imm_imm(uint16_t* i)
+static int insn_and_imm_imm(uint16_t* i)
 {
     return thumb_expand_imm_c(((*i & 0x0400) << 1) | ((*(i + 1) & 0x7000) >> 4) | (*(i + 1) & 0xFF));
 }
 
-__unused static int insn_is_push(uint16_t* i)
+static int insn_is_push(uint16_t* i)
 {
     if((*i & 0xFE00) == 0xB400)
         return 1;
@@ -367,7 +371,7 @@ __unused static int insn_is_push(uint16_t* i)
         return 0;
 }
 
-__unused static int insn_push_registers(uint16_t* i)
+static int insn_push_registers(uint16_t* i)
 {
     if((*i & 0xFE00) == 0xB400)
         return (*i & 0x00FF) | ((*i & 0x0100) << 6);
@@ -379,12 +383,12 @@ __unused static int insn_push_registers(uint16_t* i)
         return 0;
 }
 
-__unused static int insn_is_preamble_push(uint16_t* i)
+static int insn_is_preamble_push(uint16_t* i)
 {
     return insn_is_push(i) && (insn_push_registers(i) & (1 << 14)) != 0;
 }
 
-__unused static int insn_is_str_imm(uint16_t* i)
+static int insn_is_str_imm(uint16_t* i)
 {
     if((*i & 0xF800) == 0x6000)
         return 1;
@@ -398,7 +402,7 @@ __unused static int insn_is_str_imm(uint16_t* i)
         return 0;
 }
 
-__unused static int insn_str_imm_postindexed(uint16_t* i)
+static int insn_str_imm_postindexed(uint16_t* i)
 {
     if((*i & 0xF800) == 0x6000)
         return 1;
@@ -412,7 +416,7 @@ __unused static int insn_str_imm_postindexed(uint16_t* i)
         return 0;
 }
 
-__unused static int insn_str_imm_wback(uint16_t* i)
+static int insn_str_imm_wback(uint16_t* i)
 {
     if((*i & 0xF800) == 0x6000)
         return 0;
@@ -426,7 +430,7 @@ __unused static int insn_str_imm_wback(uint16_t* i)
         return 0;
 }
 
-__unused static int insn_str_imm_imm(uint16_t* i)
+static int insn_str_imm_imm(uint16_t* i)
 {
     if((*i & 0xF800) == 0x6000)
         return (*i & 0x07C0) >> 4;
@@ -440,7 +444,7 @@ __unused static int insn_str_imm_imm(uint16_t* i)
         return 0;
 }
 
-__unused static int insn_str_imm_rt(uint16_t* i)
+static int insn_str_imm_rt(uint16_t* i)
 {
     if((*i & 0xF800) == 0x6000)
         return (*i & 7);
@@ -454,7 +458,7 @@ __unused static int insn_str_imm_rt(uint16_t* i)
         return 0;
 }
 
-__unused static int insn_str_imm_rn(uint16_t* i)
+static int insn_str_imm_rn(uint16_t* i)
 {
     if((*i & 0xF800) == 0x6000)
         return (*i >> 3) & 7;
@@ -469,7 +473,7 @@ __unused static int insn_str_imm_rn(uint16_t* i)
 }
 
 // Given an instruction, search backwards until an instruction is found matching the specified criterion.
-__unused static uint16_t* find_last_insn_matching(uint32_t region, uint8_t* kdata, size_t ksize, uint16_t* current_instruction, int (*match_func)(uint16_t*))
+static uint16_t* find_last_insn_matching(uint32_t region, uint8_t* kdata, size_t ksize, uint16_t* current_instruction, int (*match_func)(uint16_t*))
 {
     while((uintptr_t)current_instruction > (uintptr_t)kdata)
     {
@@ -480,18 +484,18 @@ __unused static uint16_t* find_last_insn_matching(uint32_t region, uint8_t* kdat
         {
             --current_instruction;
         }
-        
+
         if(match_func(current_instruction))
         {
             return current_instruction;
         }
     }
-    
+
     return NULL;
 }
 
 // Given an instruction and a register, find the PC-relative address that was stored inside the register by the time the instruction was reached.
-__unused static uint32_t find_pc_rel_value(uint32_t region, uint8_t* kdata, size_t ksize, uint16_t* insn, int reg)
+static uint32_t find_pc_rel_value(uint32_t region, uint8_t* kdata, size_t ksize, uint16_t* insn, int reg)
 {
     // Find the last instruction that completely wiped out this register
     int found = 0;
@@ -505,23 +509,23 @@ __unused static uint32_t find_pc_rel_value(uint32_t region, uint8_t* kdata, size
         {
             --current_instruction;
         }
-        
+
         if(insn_is_mov_imm(current_instruction) && insn_mov_imm_rd(current_instruction) == reg)
         {
             found = 1;
             break;
         }
-        
+
         if(insn_is_ldr_literal(current_instruction) && insn_ldr_literal_rt(current_instruction) == reg)
         {
             found = 1;
             break;
         }
     }
-    
+
     if(!found)
         return 0;
-    
+
     // Step through instructions, executing them as a virtual machine, only caring about instructions that affect the target register and are commonly used for PC-relative addressing.
     uint32_t value = 0;
     while((uintptr_t)current_instruction < (uintptr_t)insn)
@@ -542,23 +546,23 @@ __unused static uint32_t find_pc_rel_value(uint32_t region, uint8_t* kdata, size
                 // Can't handle this kind of operation!
                 return 0;
             }
-            
+
             value += ((uintptr_t)current_instruction - (uintptr_t)kdata) + 4;
         }
-        
+
         current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
     }
-    
+
     return value;
 }
 
 // Find PC-relative references to a certain address (relative to kdata). This is basically a virtual machine that only cares about instructions used in PC-relative addressing, so no branches, etc.
-__unused static uint16_t* find_literal_ref(uint32_t region, uint8_t* kdata, size_t ksize, uint16_t* insn, uint32_t address)
+static uint16_t* find_literal_ref(uint32_t region, uint8_t* kdata, size_t ksize, uint16_t* insn, uint32_t address)
 {
     uint16_t* current_instruction = insn;
     uint32_t value[16];
     memset(value, 0, sizeof(value));
-    
+
     while((uintptr_t)current_instruction < (uintptr_t)(kdata + ksize))
     {
         if(insn_is_mov_imm(current_instruction))
@@ -591,10 +595,10 @@ __unused static uint16_t* find_literal_ref(uint32_t region, uint8_t* kdata, size
                 }
             }
         }
-        
+
         current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
     }
-    
+
     return NULL;
 }
 
@@ -605,7 +609,7 @@ struct find_search_mask
 };
 
 // Search the range of kdata for a series of 16-bit values that match the search mask.
-__unused static uint16_t* find_with_search_mask(uint32_t region, uint8_t* kdata, size_t ksize, int num_masks, const struct find_search_mask* masks)
+static uint16_t* find_with_search_mask(uint32_t region, uint8_t* kdata, size_t ksize, int num_masks, const struct find_search_mask* masks)
 {
     uint16_t* end = (uint16_t*)(kdata + ksize - (num_masks * sizeof(uint16_t)));
     uint16_t* cur;
@@ -621,11 +625,11 @@ __unused static uint16_t* find_with_search_mask(uint32_t region, uint8_t* kdata,
                 break;
             }
         }
-        
+
         if(matched)
             return cur;
     }
-    
+
     return NULL;
 }
 
@@ -635,52 +639,52 @@ unsigned int make_b_w(int pos, int tgt)
     unsigned int i;
     unsigned short pfx;
     unsigned short sfx;
-    
+
     unsigned int omask_1k = 0xB800;
     unsigned int omask_2k = 0xB000;
     unsigned int omask_3k = 0x9800;
     unsigned int omask_4k = 0x9000;
-    
+
     unsigned int amask = 0x7FF;
     int range;
-    
+
     range = 0x400000;
-    
+
     delta = tgt - pos - 4; /* range: 0x400000 */
     i = 0;
     if(tgt > pos) i = tgt - pos - 4;
     if(tgt < pos) i = pos - tgt - 4;
-    
+
     if (i < range){
         pfx = 0xF000 | ((delta >> 12) & 0x7FF);
         sfx =  omask_1k | ((delta >>  1) & amask);
-        
+
         return (unsigned int)pfx | ((unsigned int)sfx << 16);
     }
-    
+
     if (range < i && i < range*2){
         delta -= range;
         pfx = 0xF000 | ((delta >> 12) & 0x7FF);
         sfx =  omask_2k | ((delta >>  1) & amask);
-        
+
         return (unsigned int)pfx | ((unsigned int)sfx << 16);
     }
-    
+
     if (range*2 < i && i < range*3){
         delta -= range*2;
         pfx = 0xF000 | ((delta >> 12) & 0x7FF);
         sfx =  omask_3k | ((delta >>  1) & amask);
-        
+
         return (unsigned int)pfx | ((unsigned int)sfx << 16);
     }
-    
+
     if (range*3 < i && i < range*4){
         delta -= range*3;
         pfx = 0xF000 | ((delta >> 12) & 0x7FF);
         sfx =  omask_4k | ((delta >>  1) & amask);
         return (unsigned int)pfx | ((unsigned int)sfx << 16);
     }
-    
+
     return -1;
 }
 
@@ -689,27 +693,27 @@ uint32_t make_bl(int pos, int tgt)
     int delta;
     unsigned short pfx;
     unsigned short sfx;
-    
+
     unsigned int omask = 0xF800;
     unsigned int amask = 0x07FF;
-    
+
     delta = tgt - pos - 4; /* range: 0x400000 */
     pfx = 0xF000 | ((delta >> 12) & 0x7FF);
     sfx =  omask | ((delta >>  1) & amask);
-    
+
     return (unsigned int)pfx | ((unsigned int)sfx << 16);
 }
 
-__unused static uint32_t find_xref_begin(uint32_t region, uint8_t* data, size_t size, const char* str)
+static uint32_t find_xref_begin(uint32_t region, uint8_t* data, size_t size, const char* str)
 {
     uint8_t* magicStr = memmem(data, size, str, strlen(str));
     if(!magicStr)
         return 0;
-    
+
     uint16_t* ref = find_literal_ref(region, data, size, (uint16_t*) data, (uintptr_t)magicStr - (uintptr_t)data);
     if(!ref)
         return 0;
-    
+
     uint16_t* pref = ref;
     pref -= 2;
     if(!insn_is_32bit(pref))
@@ -717,7 +721,7 @@ __unused static uint32_t find_xref_begin(uint32_t region, uint8_t* data, size_t 
     if(insn_is_ldr_literal(pref)) {
         return (uintptr_t)pref - (uintptr_t)data;
     }
-    
+
     uint16_t* insn = NULL;
     uint16_t* current_insn = ref;
     while((uintptr_t)current_insn < (uintptr_t)(data + size))
@@ -727,7 +731,7 @@ __unused static uint32_t find_xref_begin(uint32_t region, uint8_t* data, size_t 
             insn = current_insn;
             break;
         }
-        
+
         pref = current_insn;
         pref -= 2;
         if(!insn_is_32bit(pref))
@@ -736,16 +740,16 @@ __unused static uint32_t find_xref_begin(uint32_t region, uint8_t* data, size_t 
     }
     if(!insn)
         return 0;
-    
+
     return (uintptr_t)insn - (uintptr_t)data;
 }
 
 /* iboot */
-__unused static uint16_t* find_insn_movt_rx_val(uint8_t* data, size_t size, uint16_t val)
+static uint16_t* find_insn_movt_rx_val(uint8_t* data, size_t size, uint16_t val)
 {
     int found = 0;
     uint16_t* current_insn = (uint16_t*)data;
-    
+
     while((uintptr_t)current_insn < (uintptr_t)(data + size))
     {
         if(insn_is_movt(current_insn) && insn_movt_imm(current_insn) == val)
@@ -757,11 +761,11 @@ __unused static uint16_t* find_insn_movt_rx_val(uint8_t* data, size_t size, uint
     }
     if(!found)
         return NULL;
-    
+
     return current_insn;
 }
 
-__unused static uint16_t* find_verify_shsh_func(uint16_t* insn, uint8_t* data, size_t size)
+static uint16_t* find_verify_shsh_func(uint16_t* insn, uint8_t* data, size_t size)
 {
     uint16_t* ref = NULL;
     uint16_t* pref = NULL;
@@ -773,7 +777,7 @@ __unused static uint16_t* find_verify_shsh_func(uint16_t* insn, uint8_t* data, s
             ref = current_insn;
             break;
         }
-        
+
         pref = current_insn;
         pref -= 2;
         if(!insn_is_32bit(pref))
@@ -782,11 +786,11 @@ __unused static uint16_t* find_verify_shsh_func(uint16_t* insn, uint8_t* data, s
     }
     if(!ref)
         return NULL;
-    
+
     return ref;
 }
 
-__unused static uint16_t* find_verify_shsh_ldr_post_8(uint8_t* data, size_t size)
+static uint16_t* find_verify_shsh_ldr_post_8(uint8_t* data, size_t size)
 {
     uint16_t* insn = NULL;
     uint8_t* current_insn = data;
@@ -801,16 +805,16 @@ __unused static uint16_t* find_verify_shsh_ldr_post_8(uint8_t* data, size_t size
     }
     if(!insn)
         return NULL;
-    
+
     return insn;
 }
 
 
-__unused static uint16_t* find_bl_insn_to(uint16_t* func, uint8_t* data, size_t size)
+static uint16_t* find_bl_insn_to(uint16_t* func, uint8_t* data, size_t size)
 {
     uint32_t func_addr = (uintptr_t)func - (uintptr_t)data;
     uint32_t bl_insn_op = 0;
-    
+
     uint16_t* insn = NULL;
     uint16_t* current_insn = (uint16_t*)data;
     for(int i=0; i<size;i+=2)
@@ -826,7 +830,7 @@ __unused static uint16_t* find_bl_insn_to(uint16_t* func, uint8_t* data, size_t 
     return insn;
 }
 
-__unused static uint16_t* find_ldr_xref(uint32_t region, uint8_t* data, size_t size, uint8_t* ref)
+static uint16_t* find_ldr_xref(uint32_t region, uint8_t* data, size_t size, uint8_t* ref)
 {
     uint32_t base = (uintptr_t)ref - (uintptr_t)data;
     uint32_t addr = 0;
@@ -845,29 +849,29 @@ __unused static uint16_t* find_ldr_xref(uint32_t region, uint8_t* data, size_t s
                 break;
             }
         }
-        
+
         current_insn -= 2;
         i += 2;
     }
     if(!insn)
         return NULL;
-    
+
     return insn;
 }
 
-__unused static uint16_t* find_ldr_xref_with_str(uint32_t region, uint8_t* data, size_t size, const char* str)
+static uint16_t* find_ldr_xref_with_str(uint32_t region, uint8_t* data, size_t size, const char* str)
 {
     uint8_t* magicStr = memmem(data, size, str, strlen(str));
     if(!magicStr)
         return NULL;
-    
+
     uint32_t search[1];
     search[0] = (uint32_t)(region + (uintptr_t)magicStr - (uintptr_t)data);
-    
+
     uint8_t* ref = memmem(data, size, search, 4);
     if(!ref)
         return NULL;
-    
+
     return find_ldr_xref(region, data, size, ref);
 }
 
@@ -897,10 +901,10 @@ int find_iboot_version(uint8_t* data, size_t size)
     uint8_t* magic = memmem(data, size, search, sizeof(search));
     if(!magic)
         return 0;
-    
+
     uint8_t* num = magic;
     num += 6;
-    
+
     char str[32];
     memset(str, 0x0, 32);
     int i = 0;
@@ -909,7 +913,7 @@ int find_iboot_version(uint8_t* data, size_t size)
         num++;
         i++;
     }
-    
+
     return strtol(str, NULL, 0);
 }
 
@@ -917,12 +921,12 @@ char* find_iboot_type(uint8_t* data, size_t size)
 {
     uint8_t* current = data;
     current += 0x200;
-    
+
     char* iboot_type = malloc(64);
     if (!iboot_type) {
         return NULL;
     }
-    
+
     memset(iboot_type, 0x0, 64);
     int i = 0;
     while((*(uint8_t*)current != 0x20)) {
@@ -932,7 +936,7 @@ char* find_iboot_type(uint8_t* data, size_t size)
         if(i > 64)
             break;
     }
-    
+
     return iboot_type;
 }
 
@@ -952,11 +956,11 @@ uint32_t find_iboot_base(uint8_t* data, size_t size)
     }
     if(!insn)
         return 0;
-    
+
     uint32_t val = *(uint16_t*)(current_insn) & ~0xF000;
     current_insn += 4; // pc
     val += (uintptr_t)current_insn - (uintptr_t)data + 4;
-    
+
     return *(uint32_t*)(data + val);
 }
 
@@ -968,15 +972,15 @@ uint32_t find_verify_shsh(uint8_t* data, size_t size)
         if(!insn)
             return 0;
     }
-    
+
     uint16_t* func = find_verify_shsh_func(insn, data, size);
     if(!func)
         return 0;
-    
+
     uint16_t* bl_insn = find_bl_insn_to(func, data, size);
     if(!bl_insn)
         return 0;
-    
+
     return (uintptr_t)bl_insn - (uintptr_t)data;
 }
 
@@ -985,7 +989,7 @@ uint32_t find_debug_enabled(uint32_t region, uint8_t* data, size_t size)
     uint16_t* ref = find_ldr_xref_with_str(region, data, size, "debug-enabled");
     if(!ref)
         return 0;
-    
+
     int found = 0;
     uint16_t* insn = NULL;
     uint16_t* current_insn = ref;
@@ -1005,28 +1009,28 @@ uint32_t find_debug_enabled(uint32_t region, uint8_t* data, size_t size)
                 break;
             }
         }
-        
+
         i += insn_is_32bit(current_insn) ? 4 : 2;
         current_insn += insn_is_32bit(current_insn) ? 2 : 1;
     }
     if(!insn)
         return 0;
-    
+
     return (uintptr_t)insn - (uintptr_t)data;
 }
 
-__unused static uint16_t* find_ticket(uint32_t region, uint8_t* data, size_t size)
+static uint16_t* find_ticket(uint32_t region, uint8_t* data, size_t size)
 {
     uint32_t search1[1];
     search1[0] = (uint32_t)(region + 0x280);
-    
+
     uint8_t* ref1 = memmem(data, size, search1, 4);
     if(!ref1)
         return 0;
-    
+
     uint32_t search2[1];
     search2[0] = (uint32_t)(region + (uintptr_t)ref1 - (uintptr_t)data);
-    
+
     uint8_t* ref2 = NULL;
     uint32_t current_addr = 0;
     for(int i=0;i<3;i++) {
@@ -1035,11 +1039,11 @@ __unused static uint16_t* find_ticket(uint32_t region, uint8_t* data, size_t siz
             return 0;
         current_addr = (uintptr_t)ref2 - (uintptr_t)data + 4;
     }
-    
+
     uint16_t* xref = find_ldr_xref(region, data, size, ref2);
     if(!xref)
         return 0;
-    
+
     int found = 0;
     uint16_t* insn = NULL;
     uint16_t* current_insn = xref;
@@ -1050,13 +1054,13 @@ __unused static uint16_t* find_ticket(uint32_t region, uint8_t* data, size_t siz
             found = 1;
             insn = current_insn;
             break;
-            
+
         }
         current_insn += insn_is_32bit(current_insn) ? 2 : 1;
     }
     if(!insn)
         return 0;
-    
+
     return insn; // BL
 }
 
@@ -1065,9 +1069,9 @@ uint32_t find_ticket1(uint32_t region, uint8_t* data, size_t size)
     uint16_t* bl_insn = find_ticket(region, data, size);
     if(!bl_insn)
         return 0;
-    
+
     bl_insn += insn_is_32bit(bl_insn) ? 2 : 1;
-    
+
     return (uintptr_t)bl_insn - (uintptr_t)data;
 }
 
@@ -1076,7 +1080,7 @@ uint32_t find_ticket2(uint32_t region, uint8_t* data, size_t size)
     uint16_t* bl_insn = find_ticket(region, data, size);
     if(!bl_insn)
         return 0;
-    
+
     int found = 0;
     uint16_t* pop = NULL;
     uint16_t* current_insn = bl_insn;
@@ -1087,13 +1091,13 @@ uint32_t find_ticket2(uint32_t region, uint8_t* data, size_t size)
             found = 1;
             pop = current_insn;
             break;
-            
+
         }
         current_insn += insn_is_32bit(current_insn) ? 2 : 1;
     }
     if(!pop)
         return 0;
-    
+
     found = 0;
     uint16_t* insn = NULL;
     uint16_t* pref = NULL;
@@ -1106,7 +1110,7 @@ uint32_t find_ticket2(uint32_t region, uint8_t* data, size_t size)
             insn = current_insn;
             insn += insn_is_32bit(insn) ? 2 : 1;
             break;
-            
+
         }
         if(insn_is_32bit(current_insn) && (*(uint32_t*)current_insn == 0x30fff04f))
         {
@@ -1122,7 +1126,7 @@ uint32_t find_ticket2(uint32_t region, uint8_t* data, size_t size)
     }
     if(!insn)
         return 0;
-    
+
     return (uintptr_t)insn - (uintptr_t)data;
 }
 
@@ -1131,31 +1135,31 @@ uint32_t find_boot_partition(uint32_t region, uint8_t* data, size_t size)
     uint16_t* ref = find_ldr_xref_with_str(region, data, size, "boot-partition");
     if(!ref)
         return 0;
-    
+
     uint16_t* insn = NULL;
     uint16_t* current_insn = ref;
     int i = 0;
     while((uintptr_t)current_insn < (uintptr_t)(data + size) && i < 0x100)
     {
-        
+
         if(*(uint32_t*)current_insn == 0xbf002000)
         {
             // already patched
             break;
         }
-        
+
         if(insn_is_bl(current_insn))
         {
             insn = current_insn;
             break;
         }
-        
+
         i += insn_is_32bit(current_insn) ? 4 : 2;
         current_insn += insn_is_32bit(current_insn) ? 2 : 1;
     }
     if(!insn)
         return 0;
-    
+
     return (uintptr_t)insn - (uintptr_t)data;
 }
 
@@ -1164,61 +1168,61 @@ uint32_t find_boot_ramdisk(uint32_t region, uint8_t* data, size_t size)
     uint16_t* ref = find_ldr_xref_with_str(region, data, size, "boot-ramdisk");
     if(!ref)
         return 0;
-    
+
     uint16_t* insn = NULL;
     uint16_t* current_insn = ref;
-    
+
     current_insn += insn_is_32bit(current_insn) ? 2 : 1;
-    
+
     if(!insn_is_bl(current_insn))
         return 0;
-    
+
     insn = current_insn;
-    
+
     return (uintptr_t)insn - (uintptr_t)data;
 }
 
-__unused uint32_t find_release_env_set_whitelist(uint32_t region, uint8_t* data, size_t size)
+uint32_t find_release_env_set_whitelist(uint32_t region, uint8_t* data, size_t size)
 {
     int i = 0;
-    
+
     uint8_t* str = NULL;
     uint32_t search[5];
-    
-    __unused static const char * const release_env_set_whitelist[] = {
+
+    static const char * const release_env_set_whitelist[] = {
         "auto-boot",
         "boot-args",
         "debug-uarts",
         "pwr-path",
         NULL
     };
-    
+
     for (i = 0; NULL != release_env_set_whitelist[i]; i++) {
         str = memmem(data, size, release_env_set_whitelist[i], strlen(release_env_set_whitelist[i]));
         if(!str)
             return 0;
-        
+
         search[i] = (uint32_t)(region + (uintptr_t)str - (uintptr_t)data);
     }
-    
+
     search[4] = 0; // NULL
-    
+
     uint8_t* ref = memmem(data, size, search, 4*5);
     if(!ref)
         return 0;
-    
+
     return (uintptr_t)ref - (uintptr_t)data;
 }
 
 
-__unused uint32_t find_whitelist(uint32_t region, uint8_t* data, size_t size)
+uint32_t find_whitelist(uint32_t region, uint8_t* data, size_t size)
 {
     int i = 0;
-    
+
     uint8_t* str = NULL;
     uint32_t search[13];
-    
-    __unused static const char * const whitelist[] = {
+
+    static const char * const whitelist[] = {
         "auto-boot",
         "backlight-level",
         "boot-command",
@@ -1233,21 +1237,21 @@ __unused uint32_t find_whitelist(uint32_t region, uint8_t* data, size_t size)
         "pwr-path",
         NULL
     };
-    
+
     for (i = 0; NULL != whitelist[i]; i++) {
         str = memmem(data, size, whitelist[i], strlen(whitelist[i]));
         if(!str)
             return 0;
-        
+
         search[i] = (uint32_t)(region + (uintptr_t)str - (uintptr_t)data);
     }
-    
+
     search[12] = 0; // NULL
-    
+
     uint8_t* ref = memmem(data, size, search, 4*13);
     if(!ref)
         return 0;
-    
+
     return (uintptr_t)ref - (uintptr_t)data;
 }
 
@@ -1256,27 +1260,27 @@ uint32_t find_sys_setup_default_environment(uint32_t region, uint8_t* data, size
     uint16_t* ref = find_ldr_xref_with_str(region, data, size, "/System/Library/Caches/com.apple.kernelcaches/kernelcache");
     if(!ref)
         return 0;
-    
+
     uint16_t* insn = NULL;
     uint16_t* pref = NULL;
     uint16_t* current_insn = ref;
     int i = 0;
     while((uintptr_t)current_insn < (uintptr_t)(data + size) && i < 0x100)
     {
-        
+
         if(*(uint32_t*)current_insn == 0xbf00bf00)
         {
             // already patched
             break;
         }
-        
+
         if(insn_is_bl(current_insn))
         {
             insn = current_insn;
             break;
         }
-        
-        
+
+
         pref = current_insn;
         pref -= 2;
         i += 4;
@@ -1288,7 +1292,7 @@ uint32_t find_sys_setup_default_environment(uint32_t region, uint8_t* data, size
     }
     if(!insn)
         return 0;
-    
+
     return (uintptr_t)insn - (uintptr_t)data;
 }
 
@@ -1297,14 +1301,14 @@ uint32_t find_boot_args_xref(uint32_t region, uint8_t* data, size_t size)
     uint8_t* magicStr = memmem(data, size, "rd=md0 nand-enable-reformat=1 -progress", sizeof("rd=md0 nand-enable-reformat=1 -progress"));
     if(!magicStr)
         return 0;
-    
+
     uint32_t search[1];
     search[0] = (uint32_t)(region + (uintptr_t)magicStr - (uintptr_t)data);
-    
+
     uint8_t* ref = memmem(data, size, search, 4);
     if(!ref)
         return 0;
-    
+
     return (uintptr_t)ref - (uintptr_t)data;
 }
 
@@ -1313,26 +1317,26 @@ uint32_t find_boot_args_null_xref(uint32_t region, uint8_t* data, size_t size)
     uint16_t* bootargs_md0 = find_ldr_xref_with_str(region, data, size, "rd=md0 nand-enable-reformat=1 -progress");
     if(!bootargs_md0)
         return 0;
-    
-    __unused uint16_t* insn = NULL;
-    __unused uint16_t* pref = NULL;
+
+    uint16_t* insn = NULL;
+    uint16_t* pref = NULL;
     uint16_t* current_insn = bootargs_md0;
-    
+
     int i = 0;
     int found = 0;
     uint32_t base = 0;
     uint32_t ref = 0;
     uint32_t point = 0;
-    
+
     current_insn += insn_is_32bit(current_insn) ? 2 : 1;
-    
+
     while((uintptr_t)current_insn < (uintptr_t)(data + size) && i < 0x80 && !found)
     {
         if(insn_is_ldr_literal(current_insn) && insn_ldr_literal_imm(current_insn))
         {
             base = (uintptr_t)current_insn - (uintptr_t)data;
             point = base - (base & 0x3) + insn_ldr_literal_imm(current_insn) + 4;
-            
+
             if(point < size)
             {
                 ref = *(uint32_t*)(data + point);
@@ -1340,7 +1344,7 @@ uint32_t find_boot_args_null_xref(uint32_t region, uint8_t* data, size_t size)
                 //       region + base,
                 //       insn_ldr_literal_rt(current_insn),
                 //       ref);
-                
+
                 if((ref&region) == region &&
                    (ref-region) < size) {
                     //printf(" ; dword_%x, \"%s\"",
@@ -1356,11 +1360,11 @@ uint32_t find_boot_args_null_xref(uint32_t region, uint8_t* data, size_t size)
                 //printf("\n");
             }
         }
-        
+
         i += insn_is_32bit(current_insn) ? 4 : 2;
         current_insn += insn_is_32bit(current_insn) ? 2 : 1;
     }
-    
+
     return point;
 }
 
@@ -1369,7 +1373,7 @@ uint32_t find_reliance_str(uint32_t region, uint8_t* data, size_t size)
     uint8_t* magicStr = memmem(data, size, "Reliance on this certificate ", sizeof("Reliance on this certificate ") - 1);
     if(!magicStr)
         return 0;
-    
+
     return (uintptr_t)magicStr - (uintptr_t)data;
 }
 
@@ -1378,14 +1382,14 @@ uint32_t find_go_cmd_handler(uint32_t region, uint8_t* data, size_t size)
     uint8_t* magicStr = memmem(data, size, "go", sizeof("go"));
     if(!magicStr)
         return 0;
-    
+
     uint32_t search[1];
     search[0] = (uint32_t)(region + (uintptr_t)magicStr - (uintptr_t)data);
-    
+
     uint8_t* ref = memmem(data, size, search, 4);
     if(!ref)
         return 0;
-    
+
     return (uintptr_t)ref - (uintptr_t)data + 4;
 }
 
@@ -1397,7 +1401,7 @@ uint32_t find_ret0_gadget(uint32_t region, uint8_t* kdata, size_t ksize)
     void* ptr = memmem(kdata, ksize, search, sizeof(search)) + 1;
     if(!ptr)
         return 0;
-    
+
     return ((uintptr_t)ptr) - ((uintptr_t)kdata);
 }
 
@@ -1408,7 +1412,7 @@ uint32_t find_ret1_gadget(uint32_t region, uint8_t* kdata, size_t ksize)
     void* ptr = memmem(kdata, ksize, search, sizeof(search)) + 1;
     if(!ptr)
         return 0;
-    
+
     return ((uintptr_t)ptr) - ((uintptr_t)kdata);
 }
 
@@ -1420,12 +1424,12 @@ uint32_t find_vn_getpath(uint32_t region, uint8_t* kdata, size_t ksize)
     uint16_t* fn = memmem(kdata, ksize, search, sizeof(search));
     if(!fn)
         return 0;
-    
+
     // Find the start of the function
     uint16_t* fn_start = find_last_insn_matching(region, kdata, ksize, fn, insn_is_preamble_push);
     if(!fn_start)
         return 0;
-    
+
     return ((uintptr_t)fn_start | 1) - ((uintptr_t)kdata);
 }
 
@@ -1442,11 +1446,11 @@ uint32_t find_memcmp(uint32_t region, uint8_t* kdata, size_t ksize)
         0x70, 0x47, 0xA3, 0xEB, 0x09, 0x03, 0x18, 0x46,
         0x70, 0x47
     };
-    
+
     void* ptr = memmem(kdata, ksize, search, sizeof(search)) + 1;
     if(!ptr)
         return 0;
-    
+
     return ((uintptr_t)ptr | 1) - ((uintptr_t)kdata);
 }
 
@@ -1465,11 +1469,11 @@ uint32_t find_vm_fault_enter_patch(uint32_t region, uint8_t* kdata, size_t ksize
         {0xFFF0, 0xF400}, // AND.W Rx, Ry, #0x100000
         {0xF0FF, 0x1080}
     };
-    
+
     uint16_t* insn = find_with_search_mask(region, kdata, ksize, sizeof(search_masks) / sizeof(*search_masks), search_masks);
     if(!insn)
         return 0;
-    
+
     return ((uintptr_t)insn) - ((uintptr_t)kdata);
 }
 
@@ -1485,11 +1489,11 @@ uint32_t find_vm_map_enter_patch(uint32_t region, uint8_t* kdata, size_t ksize)
         {0xFFF0, 0xF020}, // BICNE.W         Rk, Rk, #4
         {0xF0FF, 0x0004}
     };
-    
+
     uint16_t* insn = find_with_search_mask(region, kdata, ksize, sizeof(search_masks) / sizeof(*search_masks), search_masks);
     if(!insn)
         return 0;
-    
+
     insn += 4;
     return ((uintptr_t)insn) - ((uintptr_t)kdata);
 }
@@ -1512,13 +1516,13 @@ uint32_t find_vm_map_protect_patch(uint32_t region, uint8_t* kdata, size_t ksize
         //{0xF8FF, 0x2806}, // CMP     Ry, #6
         //{0xFFF0, 0xBF00}, // IT      EQ
     };
-    
+
     uint16_t* insn = find_with_search_mask(region, kdata, ksize, sizeof(search_masks) / sizeof(*search_masks), search_masks);
     if(!insn)
         return 0;
-    
+
     insn += 8;
-    
+
     return ((uintptr_t)insn) - ((uintptr_t)kdata);
 }
 
@@ -1534,11 +1538,11 @@ uint32_t find_mount(uint32_t region, uint8_t* kdata, size_t ksize)
         {0xFFF0, 0xF440}, // orr    fp, fp, #0x10000
         {0xF0FF, 0x3080}
     };
-    
+
     uint16_t* insn = find_with_search_mask(region, kdata, ksize, sizeof(search_masks) / sizeof(*search_masks), search_masks);
     if(!insn)
         return 0;
-    
+
     return ((uintptr_t)insn) - ((uintptr_t)kdata) + 1;
 }
 
@@ -1556,13 +1560,13 @@ uint32_t find_mount_90(uint32_t region, uint8_t* kdata, size_t ksize)
         {0xFFF0, 0xF010},
         {0xFFFF, 0x0F01}
     };
-    
+
     uint16_t* insn = find_with_search_mask(region, kdata, ksize, sizeof(search_masks) / sizeof(*search_masks), search_masks);
     if(!insn)
         return 0;
-    
+
     insn += 9;
-    
+
     return ((uintptr_t)insn) - ((uintptr_t)kdata) + 1;
 }
 
@@ -1581,13 +1585,13 @@ uint32_t find_csops(uint32_t region, uint8_t* kdata, size_t ksize)
         {0xFFFF, 0x0F01},
         {0xF800, 0xD000},
     };
-    
+
     uint16_t* insn = find_with_search_mask(region, kdata, ksize, sizeof(search_masks) / sizeof(*search_masks), search_masks);
     if(!insn)
         return 0;
-    
+
     insn += 9;
-    
+
     return ((uintptr_t)insn) - ((uintptr_t)kdata);
 }
 
@@ -1612,13 +1616,13 @@ uint32_t find_amfi_execve_ret(uint32_t region, uint8_t* kdata, size_t ksize)
         {0xFFFF, 0x0D00},
         {0xFFFF, 0xBDF0}    // pop   {r4, r5, r6, r7, pc}
     };
-    
+
     uint16_t* fn_start = find_with_search_mask(region, kdata, ksize, sizeof(search_masks) / sizeof(*search_masks), search_masks);
-    
+
     if(!fn_start) {
         return 0;
     }
-    
+
     return ((uintptr_t)fn_start) - ((uintptr_t)kdata) + 20;
 }
 
@@ -1627,11 +1631,11 @@ uint32_t find_amfi_cs_enforcement_got(uint32_t region, uint8_t* kdata, size_t ks
     uint8_t* errString = memmem(kdata, ksize, "failed getting entitlements", sizeof("failed getting entitlements"));
     if(!errString)
         return 0;
-    
+
     uint16_t* ref = find_literal_ref(region, kdata, ksize, (uint16_t*) kdata, (uintptr_t)errString - (uintptr_t)kdata);
     if(!ref)
         return 0;
-    
+
     // find 'BL _cs_enforcement.stub'
     uint16_t* bl = NULL;
     uint16_t* current_instruction = ref;
@@ -1642,18 +1646,18 @@ uint32_t find_amfi_cs_enforcement_got(uint32_t region, uint8_t* kdata, size_t ks
             bl = current_instruction;
             break;
         }
-        
+
         current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
     }
     if(!bl)
         return 0;
-    
+
     // get address of GOT stub
     uint32_t imm32 = insn_bl_imm32(bl);
     uint32_t target = ((uintptr_t)bl - (uintptr_t)kdata) + 4 + imm32;
     if(target > ksize)
         return 0;
-    
+
     // Find the first PC-relative reference in this function.
     int found = 0;
     int rd;
@@ -1667,13 +1671,13 @@ uint32_t find_amfi_cs_enforcement_got(uint32_t region, uint8_t* kdata, size_t ks
             current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
             break;
         }
-        
+
         current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
     }
-    
+
     if(!found)
         return 0;
-    
+
     return find_pc_rel_value(region, kdata, ksize, current_instruction, rd);
 }
 
@@ -1682,11 +1686,11 @@ uint32_t find_amfi_PE_i_can_has_debugger_got(uint32_t region, uint8_t* kdata, si
     uint8_t* errString = memmem(kdata, ksize, "failed getting entitlements", sizeof("failed getting entitlements"));
     if(!errString)
         return 0;
-    
+
     uint16_t* ref = find_literal_ref(region, kdata, ksize, (uint16_t*) kdata, (uintptr_t)errString - (uintptr_t)kdata);
     if(!ref)
         return 0;
-    
+
     // find 'BL _cs_enforcement.stub'
     uint16_t* bl = NULL;
     uint16_t* current_instruction = ref;
@@ -1697,15 +1701,15 @@ uint32_t find_amfi_PE_i_can_has_debugger_got(uint32_t region, uint8_t* kdata, si
             bl = current_instruction;
             break;
         }
-        
+
         current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
     }
     if(!bl)
         return 0;
-    
+
     // push 1-inst
     current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
-    
+
     // find 'BL _PE_i_can_has_debugger.stub'
     while((uintptr_t)current_instruction < (uintptr_t)(kdata + ksize))
     {
@@ -1714,18 +1718,18 @@ uint32_t find_amfi_PE_i_can_has_debugger_got(uint32_t region, uint8_t* kdata, si
             bl = current_instruction;
             break;
         }
-        
+
         current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
     }
     if(!bl)
         return 0;
-    
+
     // get address of GOT stub
     uint32_t imm32 = insn_bl_imm32(bl);
     uint32_t target = ((uintptr_t)bl - (uintptr_t)kdata) + 4 + imm32;
     if(target > ksize)
         return 0;
-    
+
     // Find the first PC-relative reference in this function.
     int found = 0;
     int rd;
@@ -1739,13 +1743,13 @@ uint32_t find_amfi_PE_i_can_has_debugger_got(uint32_t region, uint8_t* kdata, si
             current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
             break;
         }
-        
+
         current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
     }
-    
+
     if(!found)
         return 0;
-    
+
     return find_pc_rel_value(region, kdata, ksize, current_instruction, rd);
 }
 
@@ -1754,11 +1758,11 @@ uint32_t find_PE_i_can_has_kernel_configuration_got(uint32_t region, uint8_t* kd
     uint8_t* magicStr = memmem(kdata, ksize, "_mapForIO", sizeof("_mapForIO"));
     if(!magicStr)
         return 0;
-    
+
     uint16_t* ref = find_literal_ref(region, kdata, ksize, (uint16_t*) kdata, (uintptr_t)magicStr - (uintptr_t)kdata);
     if(!ref)
         return 0;
-    
+
     // find 'BL _IOLog.stub'
     uint16_t* bl = NULL;
     uint16_t* current_instruction = ref;
@@ -1769,15 +1773,15 @@ uint32_t find_PE_i_can_has_kernel_configuration_got(uint32_t region, uint8_t* kd
             bl = current_instruction;
             break;
         }
-        
+
         current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
     }
     if(!bl)
         return 0;
-    
+
     // push 1-inst
     current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
-    
+
     // find 'BL _PE_i_can_has_kernel_configuration.stub' (9.3-9.3.1: _PE_i_can_has_debugger)
     while((uintptr_t)current_instruction < (uintptr_t)(kdata + ksize))
     {
@@ -1786,18 +1790,18 @@ uint32_t find_PE_i_can_has_kernel_configuration_got(uint32_t region, uint8_t* kd
             bl = current_instruction;
             break;
         }
-        
+
         current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
     }
     if(!bl)
         return 0;
-    
+
     // get address of GOT stub
     uint32_t imm32 = insn_bl_imm32(bl);
     uint32_t target = ((uintptr_t)bl - (uintptr_t)kdata) + 4 + imm32;
     if(target > ksize)
         return 0;
-    
+
     // Find the first PC-relative reference in this function.
     int found = 0;
     int rd;
@@ -1811,13 +1815,13 @@ uint32_t find_PE_i_can_has_kernel_configuration_got(uint32_t region, uint8_t* kd
             current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
             break;
         }
-        
+
         current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
     }
-    
+
     if(!found)
         return 0;
-    
+
     return find_pc_rel_value(region, kdata, ksize, current_instruction, rd);
 }
 
@@ -1832,18 +1836,18 @@ uint32_t find_lwvm_jump(uint32_t region, uint8_t* kdata, size_t ksize)
         {0xFFFF, 0x0F01},
         {0xFF00, 0xD000}, //  BEQ.N
     };
-    
+
     uint16_t* insn = find_with_search_mask(region, kdata, ksize, sizeof(search_masks) / sizeof(*search_masks), search_masks);
     if(!insn)
         return 0;
-    
+
     return ((uintptr_t)insn) + 0 - ((uintptr_t)kdata) + 1;
 }
 
 // NOP out the conditional branch here (prevent kIOReturnLockedWrite error).
 uint32_t find_mapForIO(uint32_t region, uint8_t* kdata, size_t ksize)
 {
-    
+
     const struct find_search_mask search_masks[] =
     {
         {0xFFF0, 0xF8D0},
@@ -1855,13 +1859,13 @@ uint32_t find_mapForIO(uint32_t region, uint8_t* kdata, size_t ksize)
         {0xFBC0, 0xF040},
         {0xD000, 0x8000}
     };
-    
+
     uint16_t* insn = find_with_search_mask(region, kdata, ksize, sizeof(search_masks) / sizeof(*search_masks), search_masks);
     if(!insn)
         return 0;
-    
+
     insn += 6;
-    
+
     return ((uintptr_t)insn) - ((uintptr_t)kdata);
 }
 
@@ -1871,10 +1875,10 @@ uint32_t find_sandbox_mac_policy_ops(uint32_t region, uint8_t* kdata, size_t ksi
     if(!sbStr)
         return 0;
     uint32_t fullname = (uint32_t)sbStr - (uintptr_t)kdata;
-    
+
     uint32_t search[1];
     search[0] = fullname+region;
-    
+
     uint8_t* findPtr = memmem(kdata, ksize, &search, 4);
     if(!findPtr)
         return 0;
@@ -1887,15 +1891,15 @@ uint32_t find_sandbox_mac_policy_ops(uint32_t region, uint8_t* kdata, size_t ksi
 uint32_t find_sb_PE_i_can_has_debugger_got(uint32_t region, uint8_t* kdata, size_t ksize, uint32_t ops)
 {
     //ops = 0;
-    
+
     uint8_t* magicStr = memmem(kdata, ksize, "amfi_copy_seatbelt_profile_names() failed", sizeof("amfi_copy_seatbelt_profile_names() failed"));
     if(!magicStr)
         return 0;
-    
+
     uint16_t* ref = find_literal_ref(region, kdata, ksize, (uint16_t*) kdata, (uintptr_t)magicStr - (uintptr_t)kdata);
     if(!ref)
         return 0;
-    
+
     // find 'BL _strlen.stub'
     uint16_t* bl = NULL;
     uint16_t* current_instruction = ref;
@@ -1906,15 +1910,15 @@ uint32_t find_sb_PE_i_can_has_debugger_got(uint32_t region, uint8_t* kdata, size
             bl = current_instruction;
             break;
         }
-        
+
         current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
     }
     if(!bl)
         return 0;
-    
+
     // push 1-inst
     current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
-    
+
     // find 'BL _PE_i_can_has_debugger.stub'
     while((uintptr_t)current_instruction < (uintptr_t)(kdata + ksize))
     {
@@ -1923,18 +1927,18 @@ uint32_t find_sb_PE_i_can_has_debugger_got(uint32_t region, uint8_t* kdata, size
             bl = current_instruction;
             break;
         }
-        
+
         current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
     }
     if(!bl)
         return 0;
-    
+
     // get address of GOT stub
     uint32_t imm32 = insn_bl_imm32(bl);
     uint32_t target = ((uintptr_t)bl - (uintptr_t)kdata) + 4 + imm32;
     if(target > ksize)
         return 0;
-    
+
     // Find the first PC-relative reference in this function.
     int found = 0;
     int rd;
@@ -1948,13 +1952,13 @@ uint32_t find_sb_PE_i_can_has_debugger_got(uint32_t region, uint8_t* kdata, size
             current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
             break;
         }
-        
+
         current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
     }
-    
+
     if(!found)
         return 0;
-    
+
     return find_pc_rel_value(region, kdata, ksize, current_instruction, rd);
 }
 
@@ -1975,7 +1979,7 @@ uint32_t find_tfp0_patch(uint32_t region, uint8_t* kdata, size_t ksize)
         {0xFBC0, 0xF000}, // beq
         {0xD000, 0x8000}
     };
-    
+
     const struct find_search_mask search_masks_A5[] =
     {
         {0xF8FF, 0x9003}, // str rx, [sp, #0xc]
@@ -1990,16 +1994,16 @@ uint32_t find_tfp0_patch(uint32_t region, uint8_t* kdata, size_t ksize)
         {0xFBC0, 0xF000}, // beq
         {0xD000, 0x8000}
     };
-    
+
     uint16_t* fn_start = find_with_search_mask(region, kdata, ksize, sizeof(search_masks) / sizeof(*search_masks), search_masks);
-    
+
     if(!fn_start) {
         fn_start = find_with_search_mask(region, kdata, ksize, sizeof(search_masks_A5) / sizeof(*search_masks_A5), search_masks_A5);
         if(!fn_start) {
             return 0;
         }
     }
-    
+
     return ((uintptr_t)fn_start) + 6 - ((uintptr_t)kdata);
 }
 
@@ -2011,7 +2015,7 @@ int find_xnu_major_version(uint32_t region, uint8_t* kdata, size_t ksize)
         return 0;
 
     magicStr += strlen(xnu_str);
-    
+
     char str[32];
     memset(str, 0x0, 32);
     int i = 0;
@@ -2020,7 +2024,7 @@ int find_xnu_major_version(uint32_t region, uint8_t* kdata, size_t ksize)
         magicStr++;
         i++;
     }
-    
+
     return strtol(str, NULL, 0);
 }
 
@@ -2030,16 +2034,16 @@ int find_xnu_minor_version(uint32_t region, uint8_t* kdata, size_t ksize)
     uint8_t* magicStr = memmem(kdata, ksize, xnu_str, strlen(xnu_str));
     if(!magicStr)
         return 0;
-    
+
     magicStr += strlen(xnu_str);
-    
+
     while(*(uint8_t*)magicStr != 0x2E)
     {
         magicStr++;
     }
-    
+
     magicStr++;
-    
+
     char str[32];
     memset(str, 0x0, 32);
     int i = 0;
@@ -2048,7 +2052,7 @@ int find_xnu_minor_version(uint32_t region, uint8_t* kdata, size_t ksize)
         magicStr++;
         i++;
     }
-    
+
     return strtol(str, NULL, 0);
 }
 
@@ -2062,13 +2066,13 @@ uint32_t find_vm_map_enter_patch_ios6(uint32_t region, uint8_t* kdata, size_t ks
         {0xF0FF, 0x0006},
         {0xF8FF, 0x2806}  // CMP Rx, #6
     };
-    
+
     uint16_t* insn = find_with_search_mask(region, kdata, ksize, sizeof(search_masks) / sizeof(*search_masks), search_masks);
     if(!insn)
         return 0;
-    
+
     insn += 3;
-    
+
     return ((uintptr_t)insn) - ((uintptr_t)kdata);
 }
 
@@ -2079,9 +2083,9 @@ uint32_t find_vm_map_protect_patch_ios6(uint32_t region, uint8_t* kdata, size_t 
     uint16_t* insn = memmem(kdata, ksize, search, sizeof(search));
     if(!insn)
         return 0;
-    
+
     insn += 3;
-    
+
     return ((uintptr_t)insn) - ((uintptr_t)kdata);
 }
 
@@ -2093,12 +2097,12 @@ uint32_t find_tfp0_patch_ios6(uint32_t region, uint8_t* kdata, size_t ksize)
     uint16_t* fn = memmem(kdata, ksize, search, sizeof(search));
     if(!fn)
         return 0;
-    
+
     // Find the beginning of it
     uint16_t* fn_start = find_last_insn_matching(region, kdata, ksize, fn, insn_is_preamble_push);
     if(!fn_start)
         return 0;
-    
+
     // Find where something is checked to be 0 (the PID check)
     int found = 0;
     uint16_t* current_instruction = fn_start;
@@ -2109,13 +2113,13 @@ uint32_t find_tfp0_patch_ios6(uint32_t region, uint8_t* kdata, size_t ksize)
             found = 1;
             break;
         }
-        
+
         current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
     }
-    
+
     if(!found)
         return 0;
-    
+
     // Find the next conditional branch
     found = 0;
     while((uintptr_t)current_instruction < (uintptr_t)fn)
@@ -2126,13 +2130,13 @@ uint32_t find_tfp0_patch_ios6(uint32_t region, uint8_t* kdata, size_t ksize)
             found = 1;
             break;
         }
-        
+
         current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
     }
-    
+
     if(!found)
         return 0;
-    
+
     return ((uintptr_t)current_instruction) - ((uintptr_t)kdata);
 }
 
@@ -2141,11 +2145,11 @@ uint32_t find_amfi_PE_i_can_has_debugger_got_ios6(uint32_t region, uint8_t* kdat
     uint8_t* errString = memmem(kdata, ksize, "amfi_unrestrict_task_for_pid", sizeof("amfi_unrestrict_task_for_pid"));
     if(!errString)
         return 0;
-    
+
     uint16_t* ref = find_literal_ref(region, kdata, ksize, (uint16_t*) kdata, (uintptr_t)errString - (uintptr_t)kdata);
     if(!ref)
         return 0;
-    
+
     // find 'BL _vn_getpath'
     uint16_t* insn = NULL;
     uint16_t* pref = NULL;
@@ -2153,20 +2157,20 @@ uint32_t find_amfi_PE_i_can_has_debugger_got_ios6(uint32_t region, uint8_t* kdat
     int i = 0;
     while((uintptr_t)current_insn < (uintptr_t)(kdata + ksize) && i < 0x100)
     {
-        
+
         if(*(uint32_t*)current_insn == 0xbf00bf00)
         {
             // already patched
             break;
         }
-        
+
         if(insn_is_bl(current_insn))
         {
             insn = current_insn;
             break;
         }
-        
-        
+
+
         pref = current_insn;
         pref -= 2;
         i += 4;
@@ -2178,7 +2182,7 @@ uint32_t find_amfi_PE_i_can_has_debugger_got_ios6(uint32_t region, uint8_t* kdat
     }
     if(!insn)
         return 0;
-    
+
     pref = current_insn;
     pref -= 2;
     i += 4;
@@ -2187,23 +2191,23 @@ uint32_t find_amfi_PE_i_can_has_debugger_got_ios6(uint32_t region, uint8_t* kdat
         i -= 2;
     }
     current_insn = pref;
-    
+
     while((uintptr_t)current_insn < (uintptr_t)(kdata + ksize) && i < 0x100)
     {
-        
+
         if(*(uint32_t*)current_insn == 0xbf00bf00)
         {
             // already patched
             break;
         }
-        
+
         if(insn_is_bl(current_insn))
         {
             insn = current_insn;
             break;
         }
-        
-        
+
+
         pref = current_insn;
         pref -= 2;
         i += 4;
@@ -2215,13 +2219,13 @@ uint32_t find_amfi_PE_i_can_has_debugger_got_ios6(uint32_t region, uint8_t* kdat
     }
     if(!insn)
         return 0;
-    
+
     // get address of GOT stub
     uint32_t imm32 = insn_bl_imm32(insn);
     uint32_t target = ((uintptr_t)insn - (uintptr_t)kdata) + 4 + imm32;
     if(target > ksize)
         return 0;
-    
+
     // Find the first PC-relative reference in this function.
     int found = 0;
     int rd;
@@ -2235,28 +2239,28 @@ uint32_t find_amfi_PE_i_can_has_debugger_got_ios6(uint32_t region, uint8_t* kdat
             current_insn += insn_is_32bit(current_insn) ? 2 : 1;
             break;
         }
-        
+
         current_insn += insn_is_32bit(current_insn) ? 2 : 1;
     }
-    
+
     if(!found)
         return 0;
-    
+
     return find_pc_rel_value(region, kdata, ksize, current_insn, rd);
 }
 
 uint32_t find_sb_PE_i_can_has_debugger_got_ios6(uint32_t region, uint8_t* kdata, size_t ksize, uint32_t ops)
 {
     //ops = 0;
-    
+
     uint8_t* magicStr = memmem(kdata, ksize, "smalloc() failed", sizeof("smalloc() failed"));
     if(!magicStr)
         return 0;
-    
+
     uint16_t* ref = find_literal_ref(region, kdata, ksize, (uint16_t*) kdata, (uintptr_t)magicStr - (uintptr_t)kdata);
     if(!ref)
         return 0;
-    
+
     // find 'BL _strlen.stub'
     uint16_t* bl = NULL;
     uint16_t* current_instruction = ref;
@@ -2267,15 +2271,15 @@ uint32_t find_sb_PE_i_can_has_debugger_got_ios6(uint32_t region, uint8_t* kdata,
             bl = current_instruction;
             break;
         }
-        
+
         current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
     }
     if(!bl)
         return 0;
-    
+
     // push 1-inst
     current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
-    
+
     // find 'BL _PE_i_can_has_debugger.stub'
     while((uintptr_t)current_instruction < (uintptr_t)(kdata + ksize))
     {
@@ -2284,18 +2288,18 @@ uint32_t find_sb_PE_i_can_has_debugger_got_ios6(uint32_t region, uint8_t* kdata,
             bl = current_instruction;
             break;
         }
-        
+
         current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
     }
     if(!bl)
         return 0;
-    
+
     // get address of GOT stub
     uint32_t imm32 = insn_bl_imm32(bl);
     uint32_t target = ((uintptr_t)bl - (uintptr_t)kdata) + 4 + imm32;
     if(target > ksize)
         return 0;
-    
+
     // Find the first PC-relative reference in this function.
     int found = 0;
     int rd;
@@ -2309,13 +2313,13 @@ uint32_t find_sb_PE_i_can_has_debugger_got_ios6(uint32_t region, uint8_t* kdata,
             current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
             break;
         }
-        
+
         current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
     }
-    
+
     if(!found)
         return 0;
-    
+
     return find_pc_rel_value(region, kdata, ksize, current_instruction, rd);
 }
 
@@ -2325,12 +2329,12 @@ uint32_t find_sb_patch(uint32_t region, uint8_t* kdata, size_t ksize)
     uint8_t* control_name = memmem(kdata, ksize, "control_name", sizeof("control_name"));
     if(!control_name)
         return 0;
-    
+
     // Find a reference to the "control_name" string.
     uint16_t* ref = find_literal_ref(region, kdata, ksize, (uint16_t*) kdata, (uintptr_t)control_name - (uintptr_t)kdata);
     if(!ref)
         return 0;
-    
+
     // Find the start of the function referencing "control_name"
     uint16_t* fn_start = ref;
     while(1)
@@ -2338,19 +2342,19 @@ uint32_t find_sb_patch(uint32_t region, uint8_t* kdata, size_t ksize)
         fn_start = find_last_insn_matching(region, kdata, ksize, fn_start, insn_is_push);
         if(!fn_start)
             return 0;
-        
+
         uint16_t registers = insn_push_registers(fn_start);
         // We match PUSH {R0, R1} as well to detect an already patched version.
         if((registers & (1 << 14)) != 0 || (registers & (1 << 0 | 1 << 1)) == (1 << 0 | 1 << 1))
             break;
     }
-    
+
     return ((uintptr_t)fn_start) - ((uintptr_t)kdata);
 }
 
 uint32_t find_vm_fault_enter_patch_84(uint32_t region, uint8_t* kdata, size_t ksize)
 {
-    
+
     const struct find_search_mask search_masks_a5[] =
     {
         // A5(x&rA) 8.4.1
@@ -2364,32 +2368,32 @@ uint32_t find_vm_fault_enter_patch_84(uint32_t region, uint8_t* kdata, size_t ks
         {0x0F00, 0x0F00},
         {0xFF00, 0xD100}, // BNE x              <- NOP
         {0xF800, 0x6800}, // LDR R2, [Ry,#X]    <- movs r2, #1
-        
+
     };
-    
+
     uint16_t* insn_a5 = find_with_search_mask(region, kdata, ksize, sizeof(search_masks_a5) / sizeof(*search_masks_a5), search_masks_a5);
     if (insn_a5) {
         return (uintptr_t)insn_a5 - (uintptr_t)kdata +16;
     }
-    
-    
+
+
     uint16_t* ref = NULL;
-    
+
     const struct find_search_mask search_masks[] = {
         {0xF0F0, 0xF000}, // AND.W Rx, Ry, #0x40
         {0xF0FF, 0x0040}, //
         {0xFBF0, 0xF010}, // TST.W Rx, #0x200000
         {0x0F00, 0x0F00},
     };
-    
+
     uint16_t* insn = find_with_search_mask(region, kdata, ksize, sizeof(search_masks) / sizeof(*search_masks), search_masks);
     if (!insn) {
         return 0;
     }
-    
+
     // find 'Bxx loc_xxx'
     uint16_t* bne = NULL;
-    
+
     uint16_t* current_instruction = insn;
     while((uintptr_t)current_instruction < (uintptr_t)(kdata + ksize))
     {
@@ -2398,17 +2402,17 @@ uint32_t find_vm_fault_enter_patch_84(uint32_t region, uint8_t* kdata, size_t ks
             bne = current_instruction;
             break;
         }
-        
+
         current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
     }
     if(!bne)
         return 0;
-    
+
     ref = current_instruction; // save current insn
-    
-    
+
+
     current_instruction += insn_is_32bit(current_instruction) ? 2 : 1; // push
-    
+
     // find next 'Bxx loc_xxx'
     bne = NULL;
     while((uintptr_t)current_instruction < (uintptr_t)(kdata + ksize))
@@ -2418,24 +2422,24 @@ uint32_t find_vm_fault_enter_patch_84(uint32_t region, uint8_t* kdata, size_t ks
             bne = current_instruction;
             break;
         }
-        
+
         current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
     }
     if(!bne)
         return 0;
     current_instruction -= insn_is_32bit(current_instruction) ? 2 : 1; // back
-    
+
     // checkpoint
     if(!insn_is_cmp_imm(current_instruction))
         return 0;
-    
+
     return (uintptr_t)ref - (uintptr_t)kdata;
 }
 
 // Change TST.W instruction here with NOP, CMP R0, R0 (0x4280BF00)
 uint32_t find_vm_map_enter_patch_84(uint32_t region, uint8_t* kdata, size_t ksize)
 {
-    
+
     const struct find_search_mask search_masks_84[] =
     {
         {0xFFF0, 0xF000}, // AND.W Rx, Ry, #2
@@ -2447,7 +2451,7 @@ uint32_t find_vm_map_enter_patch_84(uint32_t region, uint8_t* kdata, size_t ksiz
         {0xFFF0, 0xF010}, // TST.W Rz, #4
         {0xFFFF, 0x0F04}
     };
-    
+
     const struct find_search_mask search_masks[] =
     {
         {0xFBE0, 0xF000},
@@ -2459,7 +2463,7 @@ uint32_t find_vm_map_enter_patch_84(uint32_t region, uint8_t* kdata, size_t ksiz
         {0xFFF0, 0xF010},
         {0xFFFF, 0x0F04}
     };
-    
+
     uint16_t* insn = find_with_search_mask(region, kdata, ksize, sizeof(search_masks_84) / sizeof(*search_masks_84), search_masks_84);
     if(!insn) {
         insn = find_with_search_mask(region, kdata, ksize, sizeof(search_masks) / sizeof(*search_masks), search_masks);
@@ -2467,16 +2471,16 @@ uint32_t find_vm_map_enter_patch_84(uint32_t region, uint8_t* kdata, size_t ksiz
             return 0;
         }
     }
-    
+
     insn += 2;
-    
+
     return ((uintptr_t)insn) - ((uintptr_t)kdata);
 }
 
 // NOP out the BICNE.W instruction with 4 here.
 uint32_t find_vm_map_protect_patch_84(uint32_t region, uint8_t* kdata, size_t ksize)
 {
-    
+
     const struct find_search_mask search_masks_84[] =
     {
         {0xFBF0, 0xF010}, // TST.W Rx, #0x20000000
@@ -2499,7 +2503,7 @@ uint32_t find_vm_map_protect_patch_84(uint32_t region, uint8_t* kdata, size_t ks
         {0xFFF0, 0xF020}, // BICNE.W         Rk, Rk, #4
         {0xF0FF, 0x0004}
     };
-    
+
     const struct find_search_mask search_masks[] =
     {
         {0xFBF0, 0xF010},
@@ -2520,7 +2524,7 @@ uint32_t find_vm_map_protect_patch_84(uint32_t region, uint8_t* kdata, size_t ks
         {0xFFF0, 0xF020},
         {0xF0FF, 0x0004}
     };
-    
+
     uint16_t* insn = find_with_search_mask(region, kdata, ksize, sizeof(search_masks_84) / sizeof(*search_masks_84), search_masks_84);
     if(!insn) {
         insn = find_with_search_mask(region, kdata, ksize, sizeof(search_masks) / sizeof(*search_masks), search_masks);
@@ -2531,7 +2535,7 @@ uint32_t find_vm_map_protect_patch_84(uint32_t region, uint8_t* kdata, size_t ks
     } else {
         insn += 17;
     }
-    
+
     return ((uintptr_t)insn) - ((uintptr_t)kdata);
 }
 
@@ -2549,20 +2553,20 @@ uint32_t find_mount_84(uint32_t region, uint8_t* kdata, size_t ksize)
         {0xFFF0, 0xF010},
         {0xFFFF, 0x0F01}
     };
-    
+
     uint16_t* insn = find_with_search_mask(region, kdata, ksize, sizeof(search_masks) / sizeof(*search_masks), search_masks);
     if(!insn)
     return 0;
-    
+
     insn -= 1;
-    
+
     return ((uintptr_t)insn) - ((uintptr_t)kdata) + 1;
 }
 
 // Replace with NOP
 uint32_t find_csops_84(uint32_t region, uint8_t* kdata, size_t ksize)
 {
-    
+
     const struct find_search_mask search_masks[] =
     {
         {0xFC00, 0xF400},
@@ -2582,14 +2586,14 @@ uint32_t find_csops_84(uint32_t region, uint8_t* kdata, size_t ksize)
         {0xFC00, 0xF000},
         {0x0000, 0x0000}
     };
-    
+
     uint16_t* insn = find_with_search_mask(region, kdata, ksize, sizeof(search_masks) / sizeof(*search_masks), search_masks);
     if(!insn) {
         return 0;
     }
-    
+
     insn += 14;
-    
+
     return ((uintptr_t)insn) - ((uintptr_t)kdata);
 }
 
@@ -2608,13 +2612,13 @@ uint32_t find_csops2_84(uint32_t region, uint8_t* kdata, size_t ksize)
         {0x0000, 0x0000},
         {0xFAF0, 0xF040}
     };
-    
+
     uint16_t* insn = find_with_search_mask(region, kdata, ksize, sizeof(search_masks) / sizeof(*search_masks), search_masks);
     if(!insn)
     return 0;
-    
+
     insn += 8;
-    
+
     return ((uintptr_t)insn) - ((uintptr_t)kdata);
 }
 
@@ -2623,11 +2627,11 @@ uint32_t find_amfi_cs_enforcement_got_84(uint32_t region, uint8_t* kdata, size_t
     uint8_t* errString = memmem(kdata, ksize, "missing or invalid entitlement hash", sizeof("missing or invalid entitlement hash"));
     if(!errString)
         return 0;
-    
+
     uint16_t* ref = find_literal_ref(region, kdata, ksize, (uint16_t*) kdata, (uintptr_t)errString - (uintptr_t)kdata);
     if(!ref)
         return 0;
-    
+
     // find 'BL _cs_enforcement.stub'
     uint16_t* bl = NULL;
     uint16_t* current_instruction = ref;
@@ -2638,18 +2642,18 @@ uint32_t find_amfi_cs_enforcement_got_84(uint32_t region, uint8_t* kdata, size_t
             bl = current_instruction;
             break;
         }
-        
+
         current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
     }
     if(!bl)
         return 0;
-    
+
     // get address of GOT stub
     uint32_t imm32 = insn_bl_imm32(bl);
     uint32_t target = ((uintptr_t)bl - (uintptr_t)kdata) + 4 + imm32;
     if(target > ksize)
         return 0;
-    
+
     // Find the first PC-relative reference in this function.
     int found = 0;
     int rd;
@@ -2663,13 +2667,13 @@ uint32_t find_amfi_cs_enforcement_got_84(uint32_t region, uint8_t* kdata, size_t
             current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
             break;
         }
-        
+
         current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
     }
-    
+
     if(!found)
         return 0;
-    
+
     return find_pc_rel_value(region, kdata, ksize, current_instruction, rd);
 }
 
@@ -2678,11 +2682,11 @@ uint32_t find_amfi_PE_i_can_has_debugger_got_84(uint32_t region, uint8_t* kdata,
     uint8_t* errString = memmem(kdata, ksize, "amfi_unrestrict_task_for_pid", sizeof("amfi_unrestrict_task_for_pid"));
     if(!errString)
         return 0;
-    
+
     uint16_t* ref = find_literal_ref(region, kdata, ksize, (uint16_t*) kdata, (uintptr_t)errString - (uintptr_t)kdata);
     if(!ref)
         return 0;
-    
+
     // find 'BL sym.stub._PE_parse_boot_argn'
     uint16_t* bl = NULL;
     uint16_t* pref = NULL;
@@ -2705,13 +2709,13 @@ uint32_t find_amfi_PE_i_can_has_debugger_got_84(uint32_t region, uint8_t* kdata,
     }
     if(!bl)
         return 0;
-    
+
     pref = bl;
     pref -= 2;
     if(!insn_is_32bit(pref))
     pref += 1;
     current_instruction = pref;
-    
+
     while(i < 0x100)
     {
         if(insn_is_bl(current_instruction))
@@ -2729,13 +2733,13 @@ uint32_t find_amfi_PE_i_can_has_debugger_got_84(uint32_t region, uint8_t* kdata,
     }
     if(!bl)
         return 0;
-    
+
     // get address of GOT stub
     uint32_t imm32 = insn_bl_imm32(bl);
     uint32_t target = ((uintptr_t)bl - (uintptr_t)kdata) + 4 + imm32;
     if(target > ksize)
         return 0;
-    
+
     // Find the first PC-relative reference in this function.
     int found = 0;
     int rd;
@@ -2749,19 +2753,19 @@ uint32_t find_amfi_PE_i_can_has_debugger_got_84(uint32_t region, uint8_t* kdata,
             current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
             break;
         }
-        
+
         current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
     }
-    
+
     if(!found)
         return 0;
-    
+
     return find_pc_rel_value(region, kdata, ksize, current_instruction, rd);
 }
 
 uint32_t find_sb_PE_i_can_has_debugger_got_84(uint32_t region, uint8_t* kdata, size_t ksize)
 {
-    
+
     const struct find_search_mask search_masks[] =
     {
         {0xFFFF, 0xB590}, // PUSH {R4,R7,LR}
@@ -2772,21 +2776,21 @@ uint32_t find_sb_PE_i_can_has_debugger_got_84(uint32_t region, uint8_t* kdata, s
         {0xD000, 0xD000},
         {0xFD07, 0xB100}  // CBZ  R0, loc_xxx
     };
-    
+
     uint16_t* bl = find_with_search_mask(region, kdata, ksize, sizeof(search_masks) / sizeof(*search_masks), search_masks);
     if(!bl)
         return 0;
-    
+
     bl += 4;
     if(!insn_is_bl(bl))
         return 0;
-    
+
     // get address of GOT stub
     uint32_t imm32 = insn_bl_imm32(bl);
     uint32_t target = ((uintptr_t)bl - (uintptr_t)kdata) + 4 + imm32;
     if(target > ksize)
     return 0;
-    
+
     // Find the first PC-relative reference in this function.
     int found = 0;
     int rd;
@@ -2800,13 +2804,13 @@ uint32_t find_sb_PE_i_can_has_debugger_got_84(uint32_t region, uint8_t* kdata, s
             current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
             break;
         }
-        
+
         current_instruction += insn_is_32bit(current_instruction) ? 2 : 1;
     }
-    
+
     if(!found)
     return 0;
-    
+
     return find_pc_rel_value(region, kdata, ksize, current_instruction, rd);
 }
 
@@ -2825,7 +2829,7 @@ uint32_t find_mapForIO_84(uint32_t region, uint8_t* kdata, size_t ksize)
         {0xFBC0, 0xF040},
         {0xD000, 0x8000}
     };
-    
+
     const struct find_search_mask search_masks[] =
     {
         {0xFFF0, 0xF8D0},
@@ -2837,15 +2841,15 @@ uint32_t find_mapForIO_84(uint32_t region, uint8_t* kdata, size_t ksize)
         {0xFBC0, 0xF040},
         {0xD000, 0x8000}
     };
-    
+
     uint16_t* insn = find_with_search_mask(region, kdata, ksize, sizeof(search_masks_84) / sizeof(*search_masks_84), search_masks_84);
     if(!insn)
     insn = find_with_search_mask(region, kdata, ksize, sizeof(search_masks) / sizeof(*search_masks), search_masks);
     if(!insn)
     return 0;
-    
+
     insn += 6;
-    
+
     return ((uintptr_t)insn) - ((uintptr_t)kdata);
 }
 
@@ -2863,7 +2867,7 @@ uint32_t find_vn_getpath_84(uint32_t region, uint8_t* kdata, size_t ksize)
         {0xFF00, 0x4600},
         {0xFF00, 0x4600}
     };
-    
+
     const struct find_search_mask search_masks[] =
     {
         {0xFF00, 0x4600},
@@ -2875,19 +2879,19 @@ uint32_t find_vn_getpath_84(uint32_t region, uint8_t* kdata, size_t ksize)
         {0xFF00, 0x4600},
         {0xFF00, 0x4600}
     };
-    
+
     uint16_t* insn = find_with_search_mask(region, kdata, ksize, sizeof(search_masks_84) / sizeof(*search_masks_84), search_masks_84);
     if(!insn)
     insn = find_with_search_mask(region, kdata, ksize, sizeof(search_masks) / sizeof(*search_masks), search_masks);
-    
+
     if(!insn)
     return 0;
-    
+
     // Find the start of the function
     uint16_t* fn_start = find_last_insn_matching(region, kdata, ksize, insn, insn_is_preamble_push);
     if(!fn_start)
     return 0;
-    
+
     return ((uintptr_t)fn_start | 1) - ((uintptr_t)kdata);
 }
 
@@ -2915,10 +2919,10 @@ uint32_t find_memcmp_84(uint32_t region, uint8_t* kdata, size_t ksize)
         {0xF8FF, 0x2000},
         {0xFFFF, 0x4770}
     };
-    
+
     uint16_t* ptr = find_with_search_mask(region, kdata, ksize, sizeof(search_masks) / sizeof(*search_masks), search_masks);
     if(!ptr)
     return 0;
-    
+
     return ((uintptr_t)ptr | 1) - ((uintptr_t)kdata);
 }

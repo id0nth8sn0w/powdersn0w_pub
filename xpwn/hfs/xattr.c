@@ -253,8 +253,8 @@ size_t getAttribute(Volume* volume, uint32_t fileID, const char* name, uint8_t**
 int setAttribute(Volume* volume, uint32_t fileID, const char* name, uint8_t* data, size_t size) {
     HFSPlusAttrKey key;
     HFSPlusAttrData* record;
-    __unused int ret, exact;
-    
+    int ret;
+
     if(!volume->attrTree)
         return FALSE;
     

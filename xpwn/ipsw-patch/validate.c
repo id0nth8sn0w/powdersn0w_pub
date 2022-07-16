@@ -15,7 +15,7 @@
 #include <windows.h>
 #endif
 
-char endianness;
+//char endianness;
 
 extern uint64_t MaxLoadZipSize;
 void flipAppleImg3Header(AppleImg3Header* header);
@@ -215,7 +215,6 @@ static void
 doPartialSHA1(unsigned char md[SHA_DIGEST_LENGTH], const unsigned char *toHashData, int toHashLength, DataValue *partialDigest)
 {
     const unsigned *q = (const unsigned *)partialDigest->value;
-    __unused unsigned v31 = q[0]; // XXX ASSERT(v31 == ecid->size == 64)?
     unsigned v32 = q[1];
     SHA_CTX hashctx;
     memset(&hashctx, 0, sizeof(hashctx));

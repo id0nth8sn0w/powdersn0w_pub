@@ -21,21 +21,6 @@ static bool debug_enabled = true;
 #define DEBUGLOG(x, ...)          do { if(debug_enabled) printf("\x1b[34m"x"\x1b[39m\n", ##__VA_ARGS__); } while(0)
 #define LOG(x, ...)               do { printf("\x1b[32m"x"\x1b[39m\n", ##__VA_ARGS__); } while(0)
 
-__unused static uint32_t swap32(uint32_t val)
-{
-    return ((val&~0xffffff00)<<24) | (((val>>8)&~0xffff00)<<16) | (((val>>16)&~0xff00)<<8) | (val>>24);
-}
-
-__unused static uint32_t OFFSET(uint32_t base, uint32_t off)
-{
-    if(!off) {
-        //DEBUGLOG("Failed to get koffset");
-        return 0;
-    }
-    //DEBUGLOG("%08x", base+off);
-    return base+off;
-}
-
 static int write16(void* buf, size_t bufsize, uint32_t addr, uint16_t val)
 {
     if(addr+2 > bufsize)
@@ -58,8 +43,7 @@ int patchiBoot(AbstractFile* inFile, AbstractFile* outFile, const char* customBo
     
     unsigned char* buf = NULL;
     size_t sz = 0;
-    __unused uint32_t text_base = 0;
-    
+
     sz = (size_t) inFile->getLength(inFile);
     buf = (unsigned char*) malloc(sz);
     inFile->read(inFile, buf, sz);
@@ -70,7 +54,7 @@ int patchiBoot(AbstractFile* inFile, AbstractFile* outFile, const char* customBo
         ERROR("[%s] invalid image", __FUNCTION__);
         goto end;
     }
-    
+
     int version = find_iboot_version(buf, sz);
     LOG("[%s] version: %d", __FUNCTION__, version);
     
@@ -220,7 +204,6 @@ int patchiBoot(AbstractFile* inFile, AbstractFile* outFile, const char* customBo
             }
         }
     }
-    
     
     // write
     LOG("[%s] writing buf", __FUNCTION__);
