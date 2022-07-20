@@ -1,4 +1,4 @@
-#ifdef __linux__
+#ifndef __APPLE__
 # define _GNU_SOURCE
 #endif
 

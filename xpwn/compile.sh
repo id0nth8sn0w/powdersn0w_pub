@@ -6,14 +6,13 @@ cmake=/usr/bin/cmake
 for i in "$@"; do
     if [[ $i == "help" ]]; then
         echo "Usage: $0 <all> <help> <undo>"
-        echo "    <all>: All xpwn binaries"
+        echo "    <all>: powdersn0w and daibutsu"
         echo "    <daibutsu>: Build daibutsu"
         echo "    <help>: Display this help prompt"
         echo "    <undo>: Undo preparation (macOS only)"
         exit 0
     elif [[ $i == "all" ]]; then
         echo "* Build all"
-        arg=
     elif [[ $i == "daibutsu" ]]; then
         daibutsu=1
     fi
@@ -107,7 +106,7 @@ elif [[ $OSTYPE == "msys" ]]; then
     if [[ ! -e /usr/lib/libpng.a ]]; then
         echo "* Note that if your msys-runtime is outdated, MSYS2 prompt may close after updating."
         echo "* If this happens, reopen the MSYS2 prompt and run the script again"
-        pacman -Syu --noconfirm --needed cmake git libbz2-devel make msys2-devel openssl-devel zlib-devel
+        pacman -Syu --noconfirm --needed cmake git libbz2-devel make msys2-devel openssl-devel zip zlib-devel
         mkdir tmp
         cd tmp
         git clone https://github.com/glennrp/libpng
@@ -115,7 +114,16 @@ elif [[ $OSTYPE == "msys" ]]; then
         ./configure
         make
         make install
-        cd ../..
+        cd ..
+
+        curl -LO https://opensource.apple.com/tarballs/cctools/cctools-927.0.2.tar.gz
+        mkdir cctools-tmp /usr/local/include
+        tar -xzf cctools-927.0.2.tar.gz -C cctools-tmp/
+        sed -i 's_#include_//_g' cctools-tmp/cctools-927.0.2/include/mach-o/loader.h
+        sed -i -e 's=<stdint.h>=\n#include <stdint.h>\ntypedef int integer_t;\ntypedef integer_t cpu_type_t;\ntypedef integer_t cpu_subtype_t;\ntypedef integer_t cpu_threadtype_t;\ntypedef int vm_prot_t;=g' cctools-tmp/cctools-927.0.2/include/mach-o/loader.h
+        cp -r cctools-tmp/cctools-927.0.2/include/* /usr/local/include/
+
+        cd ..
         rm -rf tmp
     fi
 
@@ -124,10 +132,10 @@ else
     exit 1
 fi
 
-[[ $platform == "win" ]] && git checkout win
-
+ipsw=powdersn0w
 cd ipsw-patch
 if [[ $daibutsu == 1 ]]; then
+    ipsw=daibutsu
     mv main.c main2.c
     mv daibutsu.c main.c
 elif [[ -e ipsw-patch/main2.c ]]; then
@@ -142,33 +150,21 @@ cd new
 $cmake ..
 make $arg
 
-if [[ $1 == "all" ]]; then
-    cp dmg/dmg ../bin
-    cp hdutil/hdutil ../bin
-    cp hfs/hfsplus ../bin
-    cp ipsw-patch/imagetool ../bin
-    cp ipsw-patch/ipsw ../bin
-    cp ipsw-patch/ticket ../bin
-    cp ipsw-patch/validate ../bin
-    cp ipsw-patch/xpwntool ../bin
-    cd ..
-    rm -rf new
-    echo "Done! Builds at bin/"
-    exit 0
-fi
-
-cp ipsw-patch/ipsw ../bin/ipsw_$platform
+cp ipsw-patch/ipsw ../bin/${ipsw}_$platform
 cd ..
 
-if [[ $platform == "win" ]]; then
+if [[ $1 == "all" ]]; then
     rm -rf new/*
-    git checkout win2
-    cd new
+    mv bin/ipsw_$platform bin/powdersn0w_$platform
+    cd ipsw-patch
+    mv main.c main2.c
+    mv daibutsu.c main.c
+    cd ../new
     $cmake ..
     make $arg
-    cp ipsw-patch/ipsw ../bin/ipsw_${platform}2
+    cp ipsw-patch/ipsw ../bin/daibutsu_$platform
     cd ..
 fi
 
 rm -rf new
-echo "Done! Build at bin/ipsw_$platform"
+echo "Done! Builds at bin/"
