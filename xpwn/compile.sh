@@ -42,7 +42,7 @@ if [[ $OSTYPE == "darwin"* ]]; then
             sudo $port install -N libpng +universal
             sudo $port install -N cmake
             sudo mkdir ${lib}2
-            sudo mv $lib/libbz2.dylib $lib/libcrypto.dylib $lib/libz.dylib $lib/libpng*.dylib ${lib}2
+            sudo mv $lib/libbz2.dylib $lib/libcrypto.dylib $lib/libz.dylib $lib/libpng*.dylib $lib/libssl*.dylib ${lib}2
         fi
     fi
 
