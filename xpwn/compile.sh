@@ -85,7 +85,13 @@ prepare() {
 
             tar -zxvf openssl-1.1.1o.tar.gz
             cd openssl-1.1.1o
-            ./Configure no-ssl3-method enable-ec_nistp_64_gcc_128 linux-x86_64 "-Wa,--noexecstack -fPIC"
+            if [[ $(uname -m) == "a"* && $(getconf LONG_BIT) == 64 ]]; then
+                ./Configure no-ssl3-method linux-aarch64 "-Wa,--noexecstack -fPIC"
+            elif [[ $(uname -m) == "a"* ]]; then
+                ./Configure no-ssl3-method linux-generic32 "-Wa,--noexecstack -fPIC"
+            else
+                ./Configure no-ssl3-method enable-ec_nistp_64_gcc_128 linux-x86_64 "-Wa,--noexecstack -fPIC"
+            fi
             make depend
             make
             sudo make install_sw install_ssldirs
@@ -95,9 +101,9 @@ prepare() {
             curl -LO https://opensource.apple.com/tarballs/cctools/cctools-927.0.2.tar.gz
             mkdir cctools-tmp
             tar -xzf cctools-927.0.2.tar.gz -C cctools-tmp/
-            sed -i "s_#include_//_g" cctools-tmp/cctools-927.0.2/include/mach-o/loader.h
-            sed -i -e "s=<stdint.h>=\n#include <stdint.h>\ntypedef int integer_t;\ntypedef integer_t cpu_type_t;\ntypedef integer_t cpu_subtype_t;\ntypedef integer_t cpu_threadtype_t;\ntypedef int vm_prot_t;=g" cctools-tmp/cctools-927.0.2/include/mach-o/loader.h
-            sudo cp -r cctools-tmp/cctools-927.0.2/include/* /usr/local/include/
+            sed -i "s_#include_//_g" cctools-tmp/*cctools-927.0.2/include/mach-o/loader.h
+            sed -i -e "s=<stdint.h>=\n#include <stdint.h>\ntypedef int integer_t;\ntypedef integer_t cpu_type_t;\ntypedef integer_t cpu_subtype_t;\ntypedef integer_t cpu_threadtype_t;\ntypedef int vm_prot_t;=g" cctools-tmp/*cctools-927.0.2/include/mach-o/loader.h
+            sudo cp -r cctools-tmp/*cctools-927.0.2/include/* /usr/local/include/
 
             cd ..
             rm -rf tmp
