@@ -62,6 +62,7 @@ prepare() {
 
         if [[ ! -e /usr/local/lib/libbz2.a || ! -e /usr/local/lib/libz.a ||
             ! -e /usr/local/lib/libcrypto.a || ! -e /usr/local/lib/libssl.a ]]; then
+            sslver="1.1.1s"
             sudo apt update
             sudo apt install -y pkg-config libtool automake g++ cmake git libusb-1.0-0-dev libreadline-dev libpng-dev git autopoint aria2 ca-certificates
 
@@ -69,7 +70,7 @@ prepare() {
             cd tmp
             git clone https://github.com/madler/zlib
             aria2c https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz
-            aria2c https://www.openssl.org/source/openssl-1.1.1o.tar.gz
+            aria2c https://www.openssl.org/source/openssl-$sslver.tar.gz
 
             tar -zxvf bzip2-1.0.8.tar.gz
             cd bzip2-1.0.8
@@ -83,8 +84,9 @@ prepare() {
             sudo make install
             cd ..
 
-            tar -zxvf openssl-1.1.1o.tar.gz
-            cd openssl-1.1.1o
+
+            tar -zxvf openssl-$sslver.tar.gz
+            cd openssl-$sslver
             if [[ $(uname -m) == "a"* && $(getconf LONG_BIT) == 64 ]]; then
                 ./Configure no-ssl3-method linux-aarch64 "-Wa,--noexecstack -fPIC"
             elif [[ $(uname -m) == "a"* ]]; then
@@ -129,9 +131,9 @@ prepare() {
             curl -LO https://opensource.apple.com/tarballs/cctools/cctools-927.0.2.tar.gz
             mkdir cctools-tmp /usr/local/include
             tar -xzf cctools-927.0.2.tar.gz -C cctools-tmp/
-            sed -i 's_#include_//_g' cctools-tmp/cctools-927.0.2/include/mach-o/loader.h
-            sed -i -e 's=<stdint.h>=\n#include <stdint.h>\ntypedef int integer_t;\ntypedef integer_t cpu_type_t;\ntypedef integer_t cpu_subtype_t;\ntypedef integer_t cpu_threadtype_t;\ntypedef int vm_prot_t;=g' cctools-tmp/cctools-927.0.2/include/mach-o/loader.h
-            cp -r cctools-tmp/cctools-927.0.2/include/* /usr/local/include/
+            sed -i 's_#include_//_g' cctools-tmp/*cctools-927.0.2/include/mach-o/loader.h
+            sed -i -e 's=<stdint.h>=\n#include <stdint.h>\ntypedef int integer_t;\ntypedef integer_t cpu_type_t;\ntypedef integer_t cpu_subtype_t;\ntypedef integer_t cpu_threadtype_t;\ntypedef int vm_prot_t;=g' cctools-tmp/*cctools-927.0.2/include/mach-o/loader.h
+            cp -r cctools-tmp/*cctools-927.0.2/include/* /usr/local/include/
 
             cd ..
             rm -rf tmp
