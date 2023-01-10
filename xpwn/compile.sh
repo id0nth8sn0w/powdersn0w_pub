@@ -48,6 +48,7 @@ prepare() {
         fi
 
     elif [[ $OSTYPE == "linux"* ]]; then
+        sslver="1.1.1s"
         platform="linux"
         echo "* Platform: Linux"
         . /etc/os-release
@@ -62,8 +63,9 @@ prepare() {
 
         if [[ ! -e /usr/local/lib/libbz2.a || ! -e /usr/local/lib/libz.a ||
             ! -e /usr/local/lib/libcrypto.a || ! -e /usr/local/lib/libssl.a ]]; then
-            sslver="1.1.1s"
+        #if [[ ! -e /usr/local/lib/libbz2.a || ! -e /usr/local/lib/libz.a ]]; then
             sudo apt update
+            sudo apt remove -y libssl-dev
             sudo apt install -y pkg-config libtool automake g++ cmake git libusb-1.0-0-dev libreadline-dev libpng-dev git autopoint aria2 ca-certificates
 
             mkdir tmp
@@ -84,7 +86,7 @@ prepare() {
             sudo make install
             cd ..
 
-
+            #: '
             tar -zxvf openssl-$sslver.tar.gz
             cd openssl-$sslver
             if [[ $(uname -m) == "a"* && $(getconf LONG_BIT) == 64 ]]; then
@@ -99,6 +101,7 @@ prepare() {
             sudo make install_sw install_ssldirs
             sudo rm -rf /usr/local/lib/libcrypto.so* /usr/local/lib/libssl.so*
             cd ..
+            #'
 
             curl -LO https://opensource.apple.com/tarballs/cctools/cctools-927.0.2.tar.gz
             mkdir cctools-tmp
