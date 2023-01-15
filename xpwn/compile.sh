@@ -178,8 +178,9 @@ build() {
         mv daibutsu.c main.c
         cd ../new
         $cmake ..
-        make $arg
+        make
         cp ipsw-patch/ipsw ../bin/daibutsu_$platform
+        cp ipsw-patch/validate ../bin
         cd ..
     fi
     if [[ $1 == "all" || $daibutsu == 1 ]]; then
