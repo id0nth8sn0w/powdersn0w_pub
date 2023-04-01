@@ -158,7 +158,7 @@ int main(int argc, char* argv[]) {
     Dictionary* shsh = NULL;
     
     if(argc < 3) {
-        XLOG(0, "usage %s <input.ipsw> <target.ipsw> [-memory] [-bbupdate] [-base <base.ipsw>] [-apticket <ticket.der>] <package1.tar> <package2.tar>...\n", argv[0]);
+        XLOG(0, "usage %s <input.ipsw> <target.ipsw> [-s <system partition size>] [-S <system partition add>] [-memory] [-bbupdate] [-base <base.ipsw>] [-apticket <ticket.der>] <package1.tar> <package2.tar>...\n", argv[0]);
         return 0;
     }
     
@@ -168,20 +168,40 @@ int main(int argc, char* argv[]) {
         if(argv[i][0] != '-') {
             break;
         }
+
         if(strcmp(argv[i], "-memory") == 0) {
             useMemory = TRUE;
             continue;
         }
+
+        if(strcmp(argv[i], "-s") == 0) {
+            int size;
+            sscanf(argv[i + 1], "%d", &size);
+            preferredRootSize = size;
+            i++;
+            continue;
+        }
+
+        if(strcmp(argv[i], "-S") == 0) {
+            int size;
+            sscanf(argv[i + 1], "%d", &size);
+            preferredRootSizeAdd = size;
+            i++;
+            continue;
+        }
+
         if(strcmp(argv[i], "-bbupdate") == 0) {
             updateBB = TRUE;
             continue;
         }
+
         if(strcmp(argv[i], "-base") == 0) {
             useBaseFW = TRUE;
             baseIPSW = argv[i + 1];
             i++;
             continue;
         }
+
         if(strcmp(argv[i], "-apticket") == 0) {
             ticketFile = createAbstractFileFromFile(fopen(argv[i + 1], "rb"));
             if(!ticketFile) {

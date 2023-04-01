@@ -103,6 +103,7 @@ dd of=/dev/rdisk0s1s4 if=/exploit bs=512k count=1
 sleep 1s
 fi
 
+nvram -c
 nvram boot-partition=2
 nvram boot-ramdisk="/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/disk.dmg"
 
