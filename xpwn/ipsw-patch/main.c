@@ -125,6 +125,7 @@ int main(int argc, char* argv[]) {
     Dictionary* configInfo = NULL;
     const char* configPlist = "FirmwareBundles/config.plist";
     char needPref = FALSE;
+    char usedaibutsu = FALSE;
     char jailbreak = FALSE;
     char debugMode = FALSE;
     char useCustomBootArgs = FALSE;
@@ -158,7 +159,7 @@ int main(int argc, char* argv[]) {
     Dictionary* shsh = NULL;
     
     if(argc < 3) {
-        XLOG(0, "usage %s <input.ipsw> <target.ipsw> [-s <system partition size>] [-S <system partition add>] [-memory] [-bbupdate] [-base <base.ipsw>] [-apticket <ticket.der>] <package1.tar> <package2.tar>...\n", argv[0]);
+        XLOG(0, "usage %s <input.ipsw> <target.ipsw> [-s <system partition size>] [-S <system partition add>] [-memory] [-bbupdate] [-base <base.ipsw>] [-apticket <ticket.der>] [-daibutsu] <package1.tar> <package2.tar>...\n", argv[0]);
         return 0;
     }
     
@@ -171,6 +172,11 @@ int main(int argc, char* argv[]) {
 
         if(strcmp(argv[i], "-memory") == 0) {
             useMemory = TRUE;
+            continue;
+        }
+
+        if(strcmp(argv[i], "-daibutsu") == 0) {
+            usedaibutsu = TRUE;
             continue;
         }
 
@@ -987,6 +993,59 @@ int main(int argc, char* argv[]) {
             tarFile->close(tarFile);
         }
     }
+
+    size_t tarPackageSize=0;
+    size_t rebootBinSize=0;
+    const char *tarFilePath;
+    const char *rebootBinPath;
+
+    if(usedaibutsu){
+        AbstractFile* tarFileFile;
+        AbstractFile* rebootBinFile;
+        StringValue* tarFileValue;
+        StringValue* rebootBinValue;
+
+        tarFileValue = (StringValue*) getValueByKey(info, "RamdiskPackage2");
+        if(tarFileValue) {
+            tarFilePath = tarFileValue->value;
+            tarFileFile = createAbstractFileFromFile(fopen(tarFilePath, "rb"));
+            if(tarFileFile) {
+                tarPackageSize = tarFileFile->getLength(tarFileFile);
+                tarFileFile->close(tarFileFile);
+                XLOG(0, "[*] Found: RamdiskPackage\n");
+            }
+        }
+
+        rebootBinValue = (StringValue*) getValueByKey(info, "RamdiskReboot");
+        if(rebootBinValue) {
+            rebootBinPath = rebootBinValue->value;
+            rebootBinFile = createAbstractFileFromFile(fopen(rebootBinPath, "rb"));
+            if(rebootBinFile) {
+                rebootBinSize = rebootBinFile->getLength(rebootBinFile);
+                rebootBinFile->close(rebootBinFile);
+                XLOG(0, "[*] Found: Hooker\n");
+            }
+        }
+    }
+
+    int hasUntether;
+    const char *untetherPath;
+    AbstractFile* untetherFile;
+    StringValue* untetherValue;
+    StringValue* hwmodelValue;
+
+    untetherValue = (StringValue*) getValueByKey(info, "UntetherPath");
+    if(untetherValue) {
+        untetherPath = untetherValue->value;
+
+        untetherFile = createAbstractFileFromFile(fopen(untetherPath, "rb"));
+        if(untetherFile) {
+            hasUntether = 1;
+            defaultRootSize += (untetherFile->getLength(untetherFile) + 1024 * 1024 - 1) / (1024 * 1024);
+            untetherFile->close(untetherFile);
+            XLOG(0, "[*] Found: Untether\n");
+        }
+    }
     
     Dictionary* systemPackage = (Dictionary*)getValueByKey(info, "FilesystemPackage");
     if(systemPackage == NULL) {
@@ -1096,6 +1155,100 @@ int main(int argc, char* argv[]) {
         if (tarFile->getLength(tarFile)) hfs_untar(rootVolume, tarFile);
         tarFile->close(tarFile);
     }
+
+    const char *movingAllFiles[19];
+    if(usedaibutsu) {
+        XLOG(0, "[*] Moving LaunchDaemons for daibutsu untether\n");
+        movingAllFiles[0] = "/usr/libexec/CrashHousekeeping";
+        movingAllFiles[1] = "/usr/libexec/CrashHousekeeping_o";
+        XLOG(0, "[+] Moving %s -> %s\n", movingAllFiles[0], movingAllFiles[1]);
+        move(movingAllFiles[0], movingAllFiles[1], rootVolume);
+
+        movingAllFiles[2] = "/Library/LaunchDaemons/com.saurik.Cydia.Startup.plist";
+        movingAllFiles[3] = "/System/Library/LaunchDaemons/com.saurik.Cydia.Startup.plist";
+        XLOG(0, "[+] Moving %s -> %s\n", movingAllFiles[2], movingAllFiles[3]);
+        move(movingAllFiles[2], movingAllFiles[3], rootVolume);
+
+        // Delete or put in /tmp
+        // !!!! It will no longer be possible to incorporate LaunchDeamons beforehand !!!!
+        movingAllFiles[4] = "/Library/LaunchDaemons";
+        movingAllFiles[5] = "/tmp/.LaunchDaemons";
+        XLOG(0, "[+] Moving dir: %s -> %s\n", movingAllFiles[4], movingAllFiles[5]);
+        move(movingAllFiles[4], movingAllFiles[5], rootVolume);
+    }
+
+    if(hasUntether == 1){
+        XLOG(0, "[*] Installing untether package\n");
+        AbstractFile* untetherTarFile;
+
+        XLOG(0, "merging %s\n", untetherPath);
+        untetherTarFile = createAbstractFileFromFile(fopen(untetherPath, "rb"));
+        if(untetherTarFile == NULL) {
+            XLOG(1, "cannot find %s, make sure your slashes are in the right direction\n", untetherPath);
+            releaseOutput(&outputState);
+            closeRoot(buffer);
+            exit(0);
+        }
+        if (untetherTarFile->getLength(untetherTarFile)) hfs_untar(rootVolume, untetherTarFile);
+        untetherTarFile->close(untetherTarFile);
+    }
+
+    if(usedaibutsu) {
+        // by LukeZGD
+        XLOG(0, "[*] Moving LaunchDaemons for daibutsu untether\n");
+        const char *movingDir1 = "/System/Library/LaunchDaemons";
+        const char *movingDir2 = "/Library/LaunchDaemons";
+        const char *movingDir3 = "/System/Library/NanoLaunchDaemons";
+        const char *movingDir4 = "/Library/NanoLaunchDaemons";
+        movingAllFiles[6] = "/Library/LaunchDaemons/bootps.plist";
+        movingAllFiles[7] = "/System/Library/LaunchDaemons/bootps.plist";
+        movingAllFiles[8] = "/Library/LaunchDaemons/com.apple.CrashHousekeeping.plist";
+        movingAllFiles[9] = "/System/Library/LaunchDaemons/com.apple.CrashHousekeeping.plist";
+        movingAllFiles[10] = "/Library/LaunchDaemons/com.apple.MobileFileIntegrity.plist";
+        movingAllFiles[11] = "/System/Library/LaunchDaemons/com.apple.MobileFileIntegrity.plist";
+        movingAllFiles[12] = "/Library/LaunchDaemons/com.apple.mDNSResponder.plist";
+        movingAllFiles[13] = "/System/Library/LaunchDaemons/com.apple.mDNSResponder.plist_";
+        movingAllFiles[14] = "/Library/LaunchDaemons/com.apple.mobile.softwareupdated.plist";
+        movingAllFiles[15] = "/System/Library/LaunchDaemons/com.apple.mobile.softwareupdated.plist_";
+        movingAllFiles[16] = "/Library/LaunchDaemons/com.apple.softwareupdateservicesd.plist";
+        movingAllFiles[17] = "/System/Library/LaunchDaemons/com.apple.softwareupdateservicesd.plist_";
+
+        XLOG(0, "[+] Moving dir: %s -> %s\n", movingDir1, movingDir2);
+        move(movingDir1, movingDir2, rootVolume);
+        XLOG(0, "[+] Moving dir: %s -> %s\n", movingDir3, movingDir4);
+        move(movingDir3, movingDir4, rootVolume);
+
+        XLOG(0, "[+] Create new folder /System/Library/LaunchDaemons\n");
+        newFolder(movingDir1, rootVolume);
+        chmodFile(movingDir1, 0755, rootVolume);
+
+        XLOG(0, "[*] Proceeding to moving LaunchDaemons and CrashHousekeeping\n");
+        for (int i = 6; i < 17; i++) {
+            if (i % 2 == 0) {
+                XLOG(0, "[+] Moving %s -> %s\n", movingAllFiles[i], movingAllFiles[i+1]);
+                move(movingAllFiles[i], movingAllFiles[i+1], rootVolume);
+            }
+        }
+
+        hwmodelValue = (StringValue*) getValueByKey(info, "hwmodel");
+        if(hwmodelValue) {
+            char str1[255];
+            char str2[255];
+            memset(&str1, 0x0, 255);
+            memset(&str2, 0x0, 255);
+
+            sprintf(str1, "/Library/LaunchDaemons/com.apple.jetsamproperties.%s.plist", hwmodelValue->value);
+            sprintf(str2, "/System/Library/LaunchDaemons/com.apple.jetsamproperties.%s.plist", hwmodelValue->value);
+
+            XLOG(0, "[+] Moving %s -> %s\n", str1, str2);
+            move(str1, str2, rootVolume);
+        }
+
+        if(hasUntether) {
+            // ??
+            chmodFile("/usr/libexec/CrashHousekeeping", 0755, rootVolume);
+        }
+    }
     
     if(jailbreak)
     {
@@ -1185,6 +1338,13 @@ int main(int argc, char* argv[]) {
         rdsize += 1048576;
         size_t add = rdsize/(ramdiskVolume->volumeHeader->blockSize) + 64;
         ramdiskGrow += add;
+    }
+
+    if(usedaibutsu){
+        XLOG(0, "[*] Growing ramdisk\n");
+        size_t allSize;
+        allSize = 1048576 + tarPackageSize + rebootBinSize;
+        ramdiskGrow = ramdiskGrow + allSize/(ramdiskVolume->volumeHeader->blockSize) + 64;
     }
     
     XLOG(0, "growing ramdisk: %d -> %d\n", ramdiskVolume->volumeHeader->totalBlocks * ramdiskVolume->volumeHeader->blockSize, (ramdiskVolume->volumeHeader->totalBlocks + ramdiskGrow) * ramdiskVolume->volumeHeader->blockSize);
@@ -1289,6 +1449,46 @@ int main(int argc, char* argv[]) {
     StringValue* optionsValue = (StringValue*) getValueByKey(info, "RamdiskOptionsPath");
     const char *optionsPlist = optionsValue ? optionsValue->value : "/usr/local/share/restore/options.plist";
     createRestoreOptions(ramdiskVolume, optionsPlist, preferredRootSize, updateBB);
+
+    if(usedaibutsu){
+        AbstractFile* tarFileFile;
+        AbstractFile* rebootBinFile;
+
+        // injecting hook via /sbin/reboot
+        const char *rebootPath = "/sbin/reboot";
+        const char *reRebootPath = "/sbin/reboot_";
+        move(rebootPath, reRebootPath, ramdiskVolume);
+        XLOG(0, "[+] ramdiskVolume ... Moved: %s -> %s\n", rebootPath, reRebootPath);
+
+        XLOG(0, "injecting reboot hooker ...\n");
+        rebootBinFile = createAbstractFileFromFile(fopen(rebootBinPath, "rb"));
+        if(rebootBinFile == NULL) {
+            XLOG(1, "cannot find %s, make sure your slashes are in the right direction\n", rebootBinPath);
+            releaseOutput(&outputState);
+            closeRoot(buffer);
+            exit(0);
+        }
+        if (rebootBinFile->getLength(rebootBinFile)) add_hfs(ramdiskVolume, rebootBinFile, rebootPath);
+        XLOG(0, "[+] ramdiskVolume ... Added: %s\n", rebootPath);
+
+        XLOG(0, "merging %s\n", tarFilePath);
+        tarFileFile = createAbstractFileFromFile(fopen(tarFilePath, "rb"));
+        if(tarFileFile == NULL) {
+            XLOG(1, "cannot find %s, make sure your slashes are in the right direction\n", tarFilePath);
+            releaseOutput(&outputState);
+            closeRoot(buffer);
+            exit(0);
+        }
+        if (tarFileFile->getLength(tarFileFile)) hfs_untar(ramdiskVolume, tarFileFile);
+        tarFileFile->close(tarFileFile);
+        XLOG(0, "[+] ramdiskVolume ... Installed package\n");
+
+        XLOG(0, "[*] ramdiskVolume ... chmod: %s -> -rwx/-r-x/-r-x\n", rebootPath);
+        chmodFile(rebootPath, 0755, ramdiskVolume);
+        XLOG(0, "[*] ramdiskVolume ... chown: %s -> root:wheel\n", rebootPath);
+        chownFile(rebootPath, 0, 0, ramdiskVolume);
+    }
+
     closeVolume(ramdiskVolume);
     CLOSE(ramdiskFS);
     
