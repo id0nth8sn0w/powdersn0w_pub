@@ -38,40 +38,40 @@ Dictionary* parseIPSW(const char* inputIPSW, const char* bundleRoot, char** bund
 Dictionary* parseIPSW2(const char* inputIPSW, const char* bundleRoot, char** bundlePath, OutputState** state, int useMemory) {
     Dictionary* info;
     char* infoPath;
-    
+
     AbstractFile* plistFile;
     char* plist;
     FILE* inputIPSWFile;
-    
-    SHA256_CTX sha_ctx;
+
+    SHA_CTX sha1_ctx;
     char* buffer;
     int read;
-    unsigned char hash[32];
-    
+    unsigned char hash[20];
+
     DIR* dir;
     struct dirent* ent;
-    StringValue* plistSHA256String;
-    unsigned int plistHash[32];
+    StringValue* plistSHA1String;
+    unsigned int plistHash[20];
     int i;
-    
+
     *bundlePath = NULL;
-    
+
     inputIPSWFile = fopen(inputIPSW, "rb");
     if(!inputIPSWFile) {
         return NULL;
     }
-    
+
     XLOG(0, "Hashing IPSW...\n");
-    
+
     buffer = malloc(BUFFERSIZE);
-    SHA256_Init(&sha_ctx);
+    SHA1_Init(&sha1_ctx);
     while(!feof(inputIPSWFile)) {
         read = fread(buffer, 1, BUFFERSIZE, inputIPSWFile);
-        SHA256_Update(&sha_ctx, buffer, read);
+        SHA1_Update(&sha1_ctx, buffer, read);
     }
-    SHA256_Final(hash, &sha_ctx);
+    SHA1_Final(hash, &sha1_ctx);
     free(buffer);
-    
+
     fclose(inputIPSWFile);
     
     XLOG(0, "Matching IPSW in %s... (%02x%02x%02x%02x...)\n", bundleRoot, (int) hash[0], (int) hash[1], (int) hash[2], (int) hash[3]);
@@ -98,24 +98,21 @@ Dictionary* parseIPSW2(const char* inputIPSW, const char* bundleRoot, char** bun
             info = createRoot(plist);
             free(plist);
             
-            plistSHA256String = (StringValue*)getValueByKey(info, "SHA256");
-            if(plistSHA256String) {
-                sscanf(plistSHA256String->value, "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+            plistSHA1String = (StringValue*)getValueByKey(info, "SHA1");
+            if(plistSHA1String) {
+                sscanf(plistSHA1String->value, "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
                        &plistHash[0], &plistHash[1], &plistHash[2], &plistHash[3], &plistHash[4],
                        &plistHash[5], &plistHash[6], &plistHash[7], &plistHash[8], &plistHash[9],
                        &plistHash[10], &plistHash[11], &plistHash[12], &plistHash[13], &plistHash[14],
-                       &plistHash[15], &plistHash[16], &plistHash[17], &plistHash[18], &plistHash[19],
-                       &plistHash[20], &plistHash[21], &plistHash[22], &plistHash[23], &plistHash[24],
-                       &plistHash[25], &plistHash[26], &plistHash[27], &plistHash[28], &plistHash[29],
-                       &plistHash[30], &plistHash[31]);
+                       &plistHash[15], &plistHash[16], &plistHash[17], &plistHash[18], &plistHash[19]);
                 
-                for(i = 0; i < 32; i++) {
+                for(i = 0; i < 20; i++) {
                     if(plistHash[i] != hash[i]) {
                         break;
                     }
                 }
                 
-                if(i == 32) {
+                if(i == 20) {
                     *bundlePath = (char*) malloc(sizeof(char) * (strlen(bundleRoot) + sizeof(PATH_SEPARATOR) + strlen(ent->d_name)));
                     sprintf(*bundlePath, "%s" PATH_SEPARATOR "%s", bundleRoot, ent->d_name);
                     
@@ -145,42 +142,42 @@ Dictionary* parseIPSW3(const char* inputIPSW, const char* bundleRoot, char** bun
 {
     Dictionary* info;
     char* infoPath;
-    
+
     AbstractFile* plistFile;
     char* plist;
     FILE* inputIPSWFile;
-    
-    SHA256_CTX sha_ctx;
+
+    SHA_CTX sha1_ctx;
     char* buffer;
     int read;
-    unsigned char hash[32];
-    
+    unsigned char hash[20];
+
     DIR* dir;
     struct dirent* ent;
-    StringValue* plistSHA256String;
-    unsigned int plistHash[32];
+    StringValue* plistSHA1String;
+    unsigned int plistHash[20];
     int i;
-    
+
     *bundlePath = NULL;
-    
+
     inputIPSWFile = fopen(inputIPSW, "rb");
     if(!inputIPSWFile) {
         return NULL;
     }
-    
+
     XLOG(0, "Hashing IPSW...\n");
-    
+
     buffer = malloc(BUFFERSIZE);
-    SHA256_Init(&sha_ctx);
+    SHA1_Init(&sha1_ctx);
     while(!feof(inputIPSWFile)) {
         read = fread(buffer, 1, BUFFERSIZE, inputIPSWFile);
-        SHA256_Update(&sha_ctx, buffer, read);
+        SHA1_Update(&sha1_ctx, buffer, read);
     }
-    SHA256_Final(hash, &sha_ctx);
+    SHA1_Final(hash, &sha1_ctx);
     free(buffer);
-    
+
     fclose(inputIPSWFile);
-    
+
     XLOG(0, "Matching IPSW in %s... (%02x%02x%02x%02x...)\n", bundleRoot, (int) hash[0], (int) hash[1], (int) hash[2], (int) hash[3]);
     
     dir = opendir(bundleRoot);
@@ -205,24 +202,21 @@ Dictionary* parseIPSW3(const char* inputIPSW, const char* bundleRoot, char** bun
             info = createRoot(plist);
             free(plist);
             
-            plistSHA256String = (StringValue*)getValueByKey(info, "SHA256");
-            if(plistSHA256String) {
-                sscanf(plistSHA256String->value, "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+            plistSHA1String = (StringValue*)getValueByKey(info, "SHA1");
+            if(plistSHA1String) {
+                sscanf(plistSHA1String->value, "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
                        &plistHash[0], &plistHash[1], &plistHash[2], &plistHash[3], &plistHash[4],
                        &plistHash[5], &plistHash[6], &plistHash[7], &plistHash[8], &plistHash[9],
                        &plistHash[10], &plistHash[11], &plistHash[12], &plistHash[13], &plistHash[14],
-                       &plistHash[15], &plistHash[16], &plistHash[17], &plistHash[18], &plistHash[19],
-                       &plistHash[20], &plistHash[21], &plistHash[22], &plistHash[23], &plistHash[24],
-                       &plistHash[25], &plistHash[26], &plistHash[27], &plistHash[28], &plistHash[29],
-                       &plistHash[30], &plistHash[31]);
+                       &plistHash[15], &plistHash[16], &plistHash[17], &plistHash[18], &plistHash[19]);
                 
-                for(i = 0; i < 32; i++) {
+                for(i = 0; i < 20; i++) {
                     if(plistHash[i] != hash[i]) {
                         break;
                     }
                 }
                 
-                if(i == 32) {
+                if(i == 20) {
                     *bundlePath = (char*) malloc(sizeof(char) * (strlen(bundleRoot) + sizeof(PATH_SEPARATOR) + strlen(ent->d_name)));
                     sprintf(*bundlePath, "%s" PATH_SEPARATOR "%s", bundleRoot, ent->d_name);
                     
