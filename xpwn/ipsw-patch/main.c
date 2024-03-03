@@ -159,7 +159,7 @@ int main(int argc, char* argv[]) {
     Dictionary* shsh = NULL;
     
     if(argc < 3) {
-        XLOG(0, "usage %s <input.ipsw> <target.ipsw> [-s <system partition size>] [-S <system partition add>] [-memory] [-bbupdate] [-base <base.ipsw>] [-apticket <ticket.der>] [-daibutsu] <package1.tar> <package2.tar>...\n", argv[0]);
+        XLOG(0, "usage %s <input.ipsw> <target.ipsw> [-s <system partition size>] [-S <system partition add>] [-memory] [-bbupdate] [-base <base.ipsw>] [-apticket <ticket.der>] [-daibutsu] [-ramdiskgrow <blocks>] <package1.tar> <package2.tar>...\n", argv[0]);
         return 0;
     }
     
@@ -192,6 +192,14 @@ int main(int argc, char* argv[]) {
             int size;
             sscanf(argv[i + 1], "%d", &size);
             preferredRootSizeAdd = size;
+            i++;
+            continue;
+        }
+
+        if(strcmp(argv[i], "-ramdiskgrow") == 0) {
+            int size;
+            sscanf(argv[i + 1], "%d", &size);
+            ramdiskGrow = size;
             i++;
             continue;
         }
