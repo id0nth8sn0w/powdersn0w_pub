@@ -21,7 +21,7 @@
 #define PATCH_GO_CMD_HANDLER    (1 << 9)
 
 #define DEFAULT_BOOTARGS    ""
-#define CSBYPASS_BOOTARGS   "cs_enforcement_disable=1 amfi_get_out_of_my_way=1"
+#define CSBYPASS_BOOTARGS   "cs_enforcement_disable=1 amfi_get_out_of_my_way=1 amfi=0xff"
 #define RAMDISK_BOOT        "-progress rd=md0 nand-enable-reformat=1"
 #define MAX_BOOTARGS_LEN    128
 
