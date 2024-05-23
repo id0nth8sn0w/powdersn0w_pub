@@ -126,6 +126,7 @@ int main(int argc, char* argv[]) {
     const char* configPlist = "FirmwareBundles/config.plist";
     char needPref = FALSE;
     char usedaibutsu = FALSE;
+    char usepunchd = FALSE;
     char jailbreak = FALSE;
     char debugMode = FALSE;
     char useCustomBootArgs = FALSE;
@@ -177,6 +178,11 @@ int main(int argc, char* argv[]) {
 
         if(strcmp(argv[i], "-daibutsu") == 0) {
             usedaibutsu = TRUE;
+            continue;
+        }
+
+        if(strcmp(argv[i], "-punchd") == 0) {
+            usepunchd = TRUE;
             continue;
         }
 
@@ -1149,6 +1155,13 @@ int main(int argc, char* argv[]) {
     if(rootSize > minimumRootSize) {
         XLOG(0, "Growing root: %ld\n", (long) preferredRootSize); fflush(stdout);
         grow_hfs(rootVolume, rootSize);
+    }
+
+    if(usepunchd) {
+        const char *movelaunchd = "/sbin/launchd";
+        const char *movedpunchd = "/sbin/punchd";
+        XLOG(0, "[+] Moving %s -> %s\n", movelaunchd, movedpunchd);
+        move(movelaunchd, movedpunchd, rootVolume);
     }
     
     for(; mergePaths < argc; mergePaths++) {
