@@ -34,7 +34,7 @@ static char* tmpFile = NULL;
 
 static AbstractFile* openRoot(void** buffer, size_t* rootSize) {
     static char tmpFileBuffer[512];
-    
+
     if((*buffer) != NULL) {
         return createAbstractFileFromMemoryFile(buffer, rootSize);
     } else {
@@ -60,7 +60,7 @@ void closeRoot(void* buffer) {
     if(buffer != NULL) {
         free(buffer);
     }
-    
+
     if(tmpFile != NULL) {
         unlink(tmpFile);
     }
@@ -68,17 +68,17 @@ void closeRoot(void* buffer) {
 
 int main(int argc, char* argv[]) {
     init_libxpwn(&argc, argv);
-    
+
     Dictionary* info;
     Dictionary* firmwarePatches;
     Dictionary* patchDict;
-    
+
     void* buffer;
-    
+
     StringValue* fileValue;
-    
+
     BoolValue* patchValue;
-    
+
     char* rootFSPathInIPSW;
     io_func* rootFS;
     Volume* rootVolume;
@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
     size_t preferredRootSize = 0;
     size_t preferredRootSizeAdd = 0;
     size_t minimumRootSize = 0;
-    
+
     char* ramdiskFSPathInIPSW;
     unsigned int ramdiskKey[32];
     unsigned int ramdiskIV[16];
@@ -95,33 +95,33 @@ int main(int argc, char* argv[]) {
     io_func* ramdiskFS;
     Volume* ramdiskVolume;
     size_t ramdiskGrow = 0;
-    
+
     Dictionary* manifest = NULL;
     AbstractFile *manifestFile;
     char manifestDirty = FALSE;
-    
+
     char* updateRamdiskFSPathInIPSW = NULL;
-    
+
     int i;
     int j;
-    
+
     OutputState* outputState;
-    
+
     char* bundlePath;
     char* bundleRoot = "FirmwareBundles/";
-    
+
     int mergePaths;
     char* outputIPSW;
-    
+
     char updateBB = FALSE;
     char useMemory = FALSE;
-    
+
     unsigned int key[32];
     unsigned int iv[16];
-    
+
     unsigned int* pKey = NULL;
     unsigned int* pIV = NULL;
-    
+
     Dictionary* configInfo = NULL;
     const char* configPlist = "FirmwareBundles/config.plist";
     char needPref = FALSE;
@@ -131,7 +131,7 @@ int main(int argc, char* argv[]) {
     char debugMode = FALSE;
     char useCustomBootArgs = FALSE;
     char* extraBootArgs = NULL;
-    
+
     Dictionary* baseInfo = NULL;
     char useBaseFW = FALSE;
     char* baseIPSW = NULL;
@@ -141,31 +141,31 @@ int main(int argc, char* argv[]) {
     Dictionary* baseFWDict = NULL;
     Dictionary* baseFWInject = NULL;
     Dictionary* baseInjectDict = NULL;
-    
+
     char hasFWBootstrap = FALSE;
     char hasFWPackage = FALSE;
     char hasRDPackage = FALSE;
     size_t rdsize = 0;
-    
+
     size_t fwBootstrapSize = 0;
     size_t fwPackageSize = 0;
     size_t rdPackageSize = 0;
-    
+
     const char* bootstrapPath = NULL;
     const char* fwPackagePath = NULL;
     const char* rdPackagePath = NULL;
     const char* selectVersion = NULL;
-    
+
     AbstractFile *ticketFile = NULL;
     Dictionary* shsh = NULL;
-    
+
     if(argc < 3) {
         XLOG(0, "usage %s <input.ipsw> <target.ipsw> [-s <system partition size>] [-S <system partition add>] [-memory] [-bbupdate] [-base <base.ipsw>] [-apticket <ticket.der>] [-daibutsu] [-ramdiskgrow <blocks>] <package1.tar> <package2.tar>...\n", argv[0]);
         return 0;
     }
-    
+
     outputIPSW = argv[2];
-    
+
     for(i = 3; i < argc; i++) {
         if(argv[i][0] != '-') {
             break;
@@ -232,15 +232,15 @@ int main(int argc, char* argv[]) {
             continue;
         }
     }
-    
+
     mergePaths = i;
-    
+
     info = parseIPSW2(argv[1], bundleRoot, &bundlePath, &outputState, useMemory);
     if(info == NULL) {
         XLOG(0, "error: Could not load IPSW\n");
         exit(1);
     }
-    
+
     if(useBaseFW) {
         baseInfo = parseIPSW3(baseIPSW, bundleRoot, &baseBundlePath, &baseOutputState, useMemory);
         if(baseInfo == NULL) {
@@ -248,13 +248,13 @@ int main(int argc, char* argv[]) {
             exit(1);
         }
     }
-    
+
     configInfo = openDict(configPlist);
     if(configInfo == NULL) {
         XLOG(0, "error: Could not config.plist\n");
         exit(1);
     }
-    
+
     manifestFile = getFileFromOutputState(&outputState, "BuildManifest.plist");
     if (manifestFile) {
         size_t fileLength = manifestFile->getLength(manifestFile);
@@ -264,7 +264,7 @@ int main(int argc, char* argv[]) {
         manifest = createRoot(plist);
         free(plist);
     }
-    
+
     // set config
     Dictionary* iBootPatches = (Dictionary*)getValueByKey(configInfo, "iBootPatches");
     if(iBootPatches) {
@@ -280,28 +280,28 @@ int main(int argc, char* argv[]) {
             XLOG(0, "[+] debugMode ? %d...\n", debugMode);
         }
     }
-    
+
     BoolValue* isNeedPref = (BoolValue*)getValueByKey(configInfo, "needPref");
     if(isNeedPref){
             needPref = isNeedPref->value;
             XLOG(0, "[+] needPref ? %d...\n", needPref);
     }
-    
+
     BoolValue* isJailbreak = (BoolValue*)getValueByKey(configInfo, "FilesystemJailbreak");
     if(isJailbreak){
         jailbreak = isJailbreak->value;
         XLOG(0, "[+] jailbreak ? %d...\n", jailbreak);
     }
-    
+
     if(jailbreak) {
         debugMode = TRUE;
         XLOG(0, "[+] debugMode ? %d...\n", debugMode);
     }
-    
+
     {
         char str[MAX_BOOTARGS_LEN];
         memset(&str, 0x0, MAX_BOOTARGS_LEN);
-        
+
         if(jailbreak) {
             if(strlen(CSBYPASS_BOOTARGS) + 1 > MAX_BOOTARGS_LEN) {
                 XLOG(0, "error: CSBYPASS_BOOTARGS is too large!\n");
@@ -309,7 +309,7 @@ int main(int argc, char* argv[]) {
             }
             sprintf(str, "%s", CSBYPASS_BOOTARGS);
         }
-        
+
         if(useCustomBootArgs) {
             if(strlen(str) + strlen(extraBootArgs) + 1 > MAX_BOOTARGS_LEN) {
                 XLOG(0, "error: extraBootArgs is too large!\n");
@@ -320,24 +320,24 @@ int main(int argc, char* argv[]) {
             else
                 sprintf(str, "%s", extraBootArgs);
         }
-        
+
         if(jailbreak || useCustomBootArgs)
             bootargs = str;
         else
             bootargs = NULL;
-        
+
         if(bootargs)
             XLOG(0, "[*] bootArgs: %s\n", bootargs);
     }
-    
+
     if(useBaseFW) {
         // injecting base .img3 imaegs
-        
+
         StringValue* baseFileValue = NULL;
         StringValue* baseManifestValue = NULL;
         StringValue* ibobKeyValue = NULL;
         StringValue* ibobIvValue = NULL;
-        
+
         const char* scabPath = NULL;
         const char* logoPath = NULL;
         const char* logbPath = NULL;
@@ -346,72 +346,72 @@ int main(int argc, char* argv[]) {
         const char* illbPath = NULL;
         const char* ibotPath = NULL;
         const char* ibobPath = NULL;
-        
+
         const char* BatteryCharging0Path = NULL;
         const char* BatteryCharging1Path = NULL;
         const char* BatteryFullPath = NULL;
         const char* BatteryLow0Path = NULL;
         const char* BatteryLow1Path = NULL;
         const char* BatteryPluginPath = NULL;
-        
+
         StringValue* ibobValue = NULL;
         const char* ibobKey = NULL;
         const char* ibobIv = NULL;
-        
+
         const char* manifestPath = NULL;
         const char* manifestFileValue = NULL;
-        
+
         size_t fileLength = 0;
-        
+
         unsigned int* decKey = NULL;
         unsigned int* decIv = NULL;
-        
+
         baseFWPath = (Dictionary*)getValueByKey(baseInfo, "FirmwarePath");
         if(baseFWPath == NULL) {
             XLOG(0, "error: Could not load baseIPSW info\n");
             exit(1);
         }
-        
+
         baseFWDict = (Dictionary*) baseFWPath->values;
         if(baseFWDict == NULL) {
             XLOG(0, "error: Could not load baseIPSW info\n");
             exit(1);
         }
-        
+
         baseFWInject = (Dictionary*)getValueByKey(info, "FirmwareReplace");
         if(baseFWInject == NULL) {
             XLOG(0, "error: Could not load IPSW info\n");
             exit(1);
         }
-        
+
         baseInjectDict = (Dictionary*) baseFWInject->values;
         if(baseInjectDict == NULL) {
             XLOG(0, "error: Could not load IPSW info\n");
             exit(1);
         }
-        
+
         while(baseInjectDict != NULL) {
             baseFileValue = (StringValue*) getValueByKey(baseInjectDict, "File");
             baseManifestValue = (StringValue*) getValueByKey(baseInjectDict, "manifest");
-            
+
             if(strcmp(baseInjectDict->dValue.key, "APTicket") == 0) {
                 // buggy
                 char* plist;
-                
+
                 scabPath = baseFileValue->value;
                 if(scabPath == NULL) {
                     XLOG(0, "error: Could not found APTicket\n");
                     exit(1);
                 }
-                
+
                 XLOG(0, "[*] Found APTicket: %s\n", scabPath);
-                
+
                 plist = (char*) malloc(ticketFile->getLength(ticketFile));
                 ticketFile->read(ticketFile, plist, ticketFile->getLength(ticketFile));
                 ticketFile->close(ticketFile);
                 shsh = createRoot(plist);
                 free(plist);
-                
+
                 DataValue* ticketValue = (DataValue*) getValueByKey(shsh, "APTicket");
                 if(ticketValue) {
                     AbstractFile* ticketInput = NULL;
@@ -419,7 +419,7 @@ int main(int argc, char* argv[]) {
                     AbstractFile* apticketInput = NULL;
                     AbstractFile* ticketOutput = NULL;
                     AbstractFile* newTicket = NULL;
-                    
+
                     void* ticketBuf = NULL;
                     void* scabBuf = NULL;
                     void* apBuf = NULL;
@@ -428,35 +428,35 @@ int main(int argc, char* argv[]) {
                     size_t scabSize = 0;
                     size_t apSize = 0;
                     size_t inDataSize = 0;
-                    
+
                     ticketSize = ticketValue->len;
                     ticketBuf = malloc(ticketSize);
                     memcpy(ticketBuf, ticketValue->value, ticketSize);
-                    
+
                     scabSize = scab_template_len;
                     scabBuf = malloc(scabSize);
                     memcpy(scabBuf, scab_template, scabSize);
-                    
+
                     apSize = ticketSize;
                     apBuf = malloc(apSize);
                     memcpy(apBuf, ticketBuf, apSize);
-                    
+
                     ticketInput = createAbstractFileFromMemoryFile((void**)&ticketBuf, &ticketSize);
                     ticketTemplate = createAbstractFileFromMemoryFile((void**)&scabBuf, &scabSize);
                     apticketInput = openAbstractFile(ticketInput);
-                    
+
                     ticketOutput = createAbstractFileFromMemoryFile((void**)&apBuf, &apSize);
                     newTicket = duplicateAbstractFile2(ticketTemplate, ticketOutput, NULL, NULL, NULL);
-                    
+
                     inDataSize = (size_t)apticketInput->getLength(apticketInput);
                     inData = malloc(inDataSize);
-                    
+
                     apticketInput->read(apticketInput, inData, inDataSize);
                     apticketInput->close(apticketInput);
-                    
+
                     newTicket->write(newTicket, inData, inDataSize);
                     newTicket->close(newTicket);
-                    
+
                     addToOutput(&outputState, scabPath, apBuf, apSize);
                     XLOG(0, "[+] Added: %s\n", scabPath);
                 } else {
@@ -464,7 +464,7 @@ int main(int argc, char* argv[]) {
                     exit(1);
                 }
             }
-            
+
             if(strcmp(baseInjectDict->dValue.key, "AppleLogo") == 0) {
                 logoPath = baseFileValue->value;
                 XLOG(0, "[*] Found AppleLogo: %s\n", logoPath);
@@ -509,7 +509,7 @@ int main(int argc, char* argv[]) {
                 illbPath = baseFileValue->value;
                 XLOG(0, "[*] Found LLB: %s\n", illbPath);
             }
-            
+
             // iboot
             if(strcmp(baseInjectDict->dValue.key, "iBoot") == 0) {
                 ibotPath = baseFileValue->value;
@@ -523,17 +523,17 @@ int main(int argc, char* argv[]) {
                     ibobKey = ibobKeyValue->value;
                 if(ibobIvValue)
                     ibobIv = ibobIvValue->value;
-                
+
                 ibobPath = baseFileValue->value;
                 XLOG(0, "[*] Found NewiBoot: %s\n", ibobPath);
             }
-            
+
             // manifest
             if(strcmp(baseInjectDict->dValue.key, "manifest") == 0) {
                 char *manifestFilePath;
                 char *newManifestFile;
                 AbstractFile *newManifest;
-                
+
                 manifestPath = baseFileValue->value;
                 if(manifestPath == NULL) {
                     XLOG(0, "error: Could not found manifest path\n");
@@ -544,31 +544,31 @@ int main(int argc, char* argv[]) {
                     XLOG(0, "error: Could not found manifest file value\n");
                     exit(1);
                 }
-                
+
                 XLOG(0, "[*] Found manifestPath: %s\n", manifestPath);
-                
+
                 manifestFilePath = malloc(sizeof(char) * (strlen(bundlePath) + strlen(manifestFileValue) + 2));
                 strcpy(manifestFilePath, bundlePath);
                 strcat(manifestFilePath, "/");
                 strcat(manifestFilePath, manifestFileValue);
-                
+
                 newManifest = createAbstractFileFromFile(fopen(manifestFilePath, "rb"));
                 fileLength = newManifest->getLength(newManifest);
                 newManifestFile = malloc(fileLength);
                 newManifest->read(newManifest, newManifestFile, fileLength);
                 newManifest->close(newManifest);
-                
+
                 addToOutput(&outputState, manifestPath, newManifestFile, fileLength);
                 XLOG(0, "[+] Added: %s\n", manifestPath);
-                
+
                 free(manifestFilePath);
             }
-            
+
             baseInjectDict = (Dictionary*) baseInjectDict->dValue.next;
         }
-        
+
         StringValue* baseFWFileValue = NULL;
-        
+
         while(baseFWDict != NULL) {
             XLOG(0, "[*] Replacing flash_nor...\n");
             baseFWFileValue = (StringValue*) getValueByKey(baseFWDict, "File");
@@ -580,13 +580,13 @@ int main(int argc, char* argv[]) {
                 XLOG(0, "error: Could not found base firmware value\n");
                 exit(1);
             }
-            
+
             if(strcmp(baseFWDict->dValue.key, "AppleLogo") == 0) {
                 AbstractFile* file = NULL;
                 char* buf = NULL;
                 AbstractFile* newNORFile = NULL;
                 char* newNORBuf = NULL;
-                
+
                 file = getFileFromOutputState(&baseOutputState, baseFWFileValue->value);
                 fileLength = file->getLength(file);
                 buf = malloc(fileLength);
@@ -594,16 +594,16 @@ int main(int argc, char* argv[]) {
                 file->close(file);
                 addToOutput(&outputState, logoPath, buf, fileLength);
                 XLOG(0, "[+] Added: %s\n", logoPath);
-                
+
                 newNORFile = getFileFromOutputState(&outputState, logbPath);
                 fileLength = newNORFile->getLength(newNORFile);
                 newNORBuf = malloc(fileLength);
                 newNORFile->read(newNORFile, newNORBuf, fileLength);
-                
+
                 XLOG(0, "[*] Rewrite img3 TYPE tag: %s -> %s\n", "logo", "logb");
                 *(uint8_t*)(newNORBuf+0x10) = 0x62;
                 *(uint8_t*)(newNORBuf+0x20) = 0x62;
-                
+
                 newNORFile->close(newNORFile);
                 addToOutput(&outputState, logbPath, newNORBuf, fileLength);
                 XLOG(0, "[+] Added: %s\n", logbPath);
@@ -611,78 +611,78 @@ int main(int argc, char* argv[]) {
             if(strcmp(baseFWDict->dValue.key, "BatteryCharging0") == 0) {
                 AbstractFile* file = NULL;
                 char* buf = NULL;
-                
+
                 file = getFileFromOutputState(&baseOutputState, baseFWFileValue->value);
                 fileLength = file->getLength(file);
                 buf = malloc(fileLength);
                 file->read(file, buf, fileLength);
                 file->close(file);
-                
+
                 addToOutput(&outputState, BatteryCharging0Path, buf, fileLength);
                 XLOG(0, "[+] Added: %s\n", BatteryCharging0Path);
             }
             if(strcmp(baseFWDict->dValue.key, "BatteryCharging1") == 0) {
                 AbstractFile* file = NULL;
                 char* buf = NULL;
-                
+
                 file = getFileFromOutputState(&baseOutputState, baseFWFileValue->value);
                 fileLength = file->getLength(file);
                 buf = malloc(fileLength);
                 file->read(file, buf, fileLength);
                 file->close(file);
-                
+
                 addToOutput(&outputState, BatteryCharging1Path, buf, fileLength);
                 XLOG(0, "[+] Added: %s\n", BatteryCharging1Path);
             }
             if(strcmp(baseFWDict->dValue.key, "BatteryFull") == 0) {
                 AbstractFile* file = NULL;
                 char* buf = NULL;
-                
+
                 file = getFileFromOutputState(&baseOutputState, baseFWFileValue->value);
                 fileLength = file->getLength(file);
                 buf = malloc(fileLength);
                 file->read(file, buf, fileLength);
                 file->close(file);
-                
+
                 addToOutput(&outputState, BatteryFullPath, buf, fileLength);
                 XLOG(0, "[+] Added: %s\n", BatteryFullPath);
             }
             if(strcmp(baseFWDict->dValue.key, "BatteryLow0") == 0) {
                 AbstractFile* file = NULL;
                 char* buf = NULL;
-                
+
                 file = getFileFromOutputState(&baseOutputState, baseFWFileValue->value);
                 fileLength = file->getLength(file);
                 buf = malloc(fileLength);
                 file->read(file, buf, fileLength);
                 file->close(file);
-                
+
                 addToOutput(&outputState, BatteryLow0Path, buf, fileLength);
                 XLOG(0, "[+] Added: %s\n", BatteryLow0Path);
             }
             if(strcmp(baseFWDict->dValue.key, "BatteryLow1") == 0) {
                 AbstractFile* file = NULL;
                 char* buf = NULL;
-                
+
                 file = getFileFromOutputState(&baseOutputState, baseFWFileValue->value);
                 fileLength = file->getLength(file);
                 buf = malloc(fileLength);
                 file->read(file, buf, fileLength);
                 file->close(file);
-                
+
                 addToOutput(&outputState, BatteryLow1Path, buf, fileLength);
                 XLOG(0, "[+] Added: %s\n", BatteryLow1Path);
             }
             if(strcmp(baseFWDict->dValue.key, "BatteryPlugin") == 0) {
                 AbstractFile* file = NULL;
                 char* buf = NULL;
-                
+
                 file = getFileFromOutputState(&baseOutputState, baseFWFileValue->value);
                 fileLength = file->getLength(file);
                 buf = malloc(fileLength);
                 file->read(file, buf, fileLength);
                 file->close(file);
-                
+
                 addToOutput(&outputState, BatteryPluginPath, buf, fileLength);
                 XLOG(0, "[+] Added: %s\n", BatteryPluginPath);
             }
@@ -691,7 +691,7 @@ int main(int argc, char* argv[]) {
                 char* buf = NULL;
                 AbstractFile* newNORFile = NULL;
                 char* newNORBuf = NULL;
-                
+
                 file = getFileFromOutputState(&baseOutputState, baseFWFileValue->value);
                 fileLength = file->getLength(file);
                 buf = malloc(fileLength);
@@ -699,16 +699,16 @@ int main(int argc, char* argv[]) {
                 file->close(file);
                 addToOutput(&outputState, recmPath, buf, fileLength);
                 XLOG(0, "[+] Added: %s\n", recmPath);
-                
+
                 newNORFile = getFileFromOutputState(&outputState, recbPath);
                 fileLength = newNORFile->getLength(newNORFile);
                 newNORBuf = malloc(fileLength);
                 newNORFile->read(newNORFile, newNORBuf, fileLength);
-                
+
                 XLOG(0, "[*] Rewrite img3 TYPE tag: %s -> %s\n", "recm", "recb");
                 *(uint8_t*)(newNORBuf+0x10) = 0x62;
                 *(uint8_t*)(newNORBuf+0x20) = 0x62;
-                
+
                 newNORFile->close(newNORFile);
                 addToOutput(&outputState, recbPath, newNORBuf, fileLength);
                 XLOG(0, "[+] Added: %s\n", recbPath);
@@ -716,24 +716,24 @@ int main(int argc, char* argv[]) {
             if(strcmp(baseFWDict->dValue.key, "LLB") == 0) {
                 AbstractFile* file = NULL;
                 char* buf = NULL;
-                
+
                 file = getFileFromOutputState(&baseOutputState, baseFWFileValue->value);
                 fileLength = file->getLength(file);
                 buf = malloc(fileLength);
                 file->read(file, buf, fileLength);
                 file->close(file);
-                
+
                 addToOutput(&outputState, illbPath, buf, fileLength);
                 XLOG(0, "[+] Added: %s\n", illbPath);
             }
-            
+
             // iboot
             if(strcmp(baseFWDict->dValue.key, "iBoot") == 0) {
                 AbstractFile* file = NULL;
                 char* buf = NULL;
                 AbstractFile* newNORFile = NULL;
                 char* newNORBuf = NULL;
-                
+
                 // patch
                 XLOG(0, "[*] Creating new iBoot...\n");
                 newNORFile = getFileFromOutputState(&outputState, ibotPath);
@@ -746,7 +746,7 @@ int main(int argc, char* argv[]) {
                 newNORFile->close(newNORFile);
                 addToOutput(&outputState, ibobPath, newNORBuf, fileLength);
                 XLOG(0, "[+] Added: %s\n", ibobPath);
-                
+
                 XLOG(0, "[*] Patching iBoot...\n");
                 decKey = NULL;
                 decIv = NULL;
@@ -764,7 +764,7 @@ int main(int argc, char* argv[]) {
                            &iv[9], &iv[10], &iv[11], &iv[12], &iv[13], &iv[14], &iv[15]);
                     decIv = iv;
                 }
-                
+
                 uint32_t debugFlags = PATCH_NONE;
                 if(debugMode)
                     debugFlags |= PATCH_DEBUG;
@@ -776,51 +776,51 @@ int main(int argc, char* argv[]) {
                 XLOG(0, "%s: ", baseFWDict->dValue.key); fflush(stdout);
                 doDecrypt(NULL, ibobValue, bundlePath, &outputState, decKey, decIv, useMemory);
                 XLOG(0, "[*] Done: %s\n", ibobPath);
-                
+
                 // orig
                 file = getFileFromOutputState(&baseOutputState, baseFWFileValue->value);
                 fileLength = file->getLength(file);
                 buf = malloc(fileLength);
                 file->read(file, buf, fileLength);
                 file->close(file);
-                
+
                 addToOutput(&outputState, ibotPath, buf, fileLength);
                 XLOG(0, "[+] Added: %s\n", ibotPath);
-                
+
             }
-            
+
             baseFWDict = (Dictionary*) baseFWDict->dValue.next;
         }
-        
+
     }
-    
+
     firmwarePatches = (Dictionary*)getValueByKey(info, "Firmware");
     patchDict = (Dictionary*) firmwarePatches->values;
     while(patchDict != NULL) {
         fileValue = (StringValue*) getValueByKey(patchDict, "File");
-        
+
         StringValue* keyValue = (StringValue*) getValueByKey(patchDict, "Key");
         StringValue* ivValue = (StringValue*) getValueByKey(patchDict, "IV");
         pKey = NULL;
         pIV = NULL;
-        
+
         if(keyValue) {
             sscanf(keyValue->value, "%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x",
                    &key[0], &key[1], &key[2], &key[3], &key[4], &key[5], &key[6], &key[7], &key[8],
                    &key[9], &key[10], &key[11], &key[12], &key[13], &key[14], &key[15],
                    &key[16], &key[17], &key[18], &key[19], &key[20], &key[21], &key[22], &key[23], &key[24],
                    &key[25], &key[26], &key[27], &key[28], &key[29], &key[30], &key[31]);
-            
+
             pKey = key;
         }
-        
+
         if(ivValue) {
             sscanf(ivValue->value, "%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x",
                    &iv[0], &iv[1], &iv[2], &iv[3], &iv[4], &iv[5], &iv[6], &iv[7], &iv[8],
                    &iv[9], &iv[10], &iv[11], &iv[12], &iv[13], &iv[14], &iv[15]);
             pIV = iv;
         }
-        
+
         if(strcmp(patchDict->dValue.key, "Restore Ramdisk") == 0) {
             ramdiskFSPathInIPSW = fileValue->value;
             if(pKey) {
@@ -833,28 +833,28 @@ int main(int argc, char* argv[]) {
                 pRamdiskIV = NULL;
             }
         }
-        
+
         if(strcmp(patchDict->dValue.key, "Update Ramdisk") == 0) {
             updateRamdiskFSPathInIPSW = fileValue->value;
         }
-        
+
         if((strcmp(patchDict->dValue.key, "iBSS") == 0)||
            (strcmp(patchDict->dValue.key, "iBEC") == 0)) {
             patchValue = (BoolValue*) getValueByKey(patchDict, "Patch");
             if(patchValue) {
-                
+
                 {
                     bootargs = NULL;
-                    
+
                     char str[MAX_BOOTARGS_LEN];
                     memset(&str, 0x0, MAX_BOOTARGS_LEN);
-                    
+
                     if(strlen(CSBYPASS_BOOTARGS) + 1 > MAX_BOOTARGS_LEN) {
                         XLOG(0, "error: CSBYPASS_BOOTARGS is too large!\n");
                         exit(1);
                     }
                     sprintf(str, "%s", CSBYPASS_BOOTARGS);
-                    
+
                     if(useCustomBootArgs) {
                         if(strlen(str) + strlen(extraBootArgs) + 1 > MAX_BOOTARGS_LEN) {
                             XLOG(0, "error: extraBootArgs is too large!\n");
@@ -862,37 +862,37 @@ int main(int argc, char* argv[]) {
                         }
                             sprintf(str, "%s %s", str, extraBootArgs);
                     }
-                    
+
                     bootargs = str;
-                    
+
                     if(bootargs)
                         XLOG(0, "[*] restore bootArgs: %s\n", bootargs);
                 }
-                
+
                 uint32_t debugFlags = PATCH_DEBUG;
                 XLOG(0, "%s: ", patchDict->dValue.key); fflush(stdout);
                 if(doiBootPatch(fileValue, bundlePath, &outputState, pKey, pIV, useMemory, bootargs, debugFlags)) {
                     XLOG(0, "error: Could not patch iBoot\n");
                     exit(1);
                 }
-                    
+
             }
         }
-        
+
         if((strcmp(patchDict->dValue.key, "KernelCache") == 0)) {
-            
+
             BoolValue *decryptValue = (BoolValue *)getValueByKey(patchDict, "Decrypt");
             StringValue *decryptPathValue = (StringValue*) getValueByKey(patchDict, "DecryptPath");
             patchValue = (BoolValue*) getValueByKey(patchDict, "Patch");
-            
-            
+
+
             // 1, check DecryptPath value
             if(decryptPathValue) {
                 // 1-1, make "dec"reskc
                 const char* restoreKernelCache = "RestoreKernelCache";
                 XLOG(0, "%s: ", restoreKernelCache); fflush(stdout);
                 doDecrypt(decryptPathValue, fileValue, bundlePath, &outputState, pKey, pIV, useMemory);
-                
+
                 // 1-2, check manifest
                 if (decryptPathValue  && manifest) {
                     // 1-2-1, check buildIdentities
@@ -917,7 +917,7 @@ int main(int argc, char* argv[]) {
                         }
                     }
                 }
-                
+
                 // 1-3, check patchvalue
                 if(patchValue) {
                     // 1-3-1, patch decreskc
@@ -928,8 +928,8 @@ int main(int argc, char* argv[]) {
                     }
                 }
             }
-            
-            
+
+
             // 2, check jailbreak state
             if(jailbreak) {
                 // 2-1, patch stock kc
@@ -939,15 +939,15 @@ int main(int argc, char* argv[]) {
                     exit(1);
                 }
             }
-            
-            
+
+
             // 3, check Decrypt value
             if(decryptValue && decryptValue->value) {
                 // 3-1, decrypt stock kc
                 XLOG(0, "%s: ", patchDict->dValue.key); fflush(stdout);
                 doDecrypt(NULL, fileValue, bundlePath, &outputState, pKey, pIV, useMemory);
             }
-            
+
         } else {
             BoolValue *decryptValue = (BoolValue *)getValueByKey(patchDict, "Decrypt");
             StringValue *decryptPathValue = (StringValue*) getValueByKey(patchDict, "DecryptPath");
@@ -981,10 +981,10 @@ int main(int argc, char* argv[]) {
                 }
             }
         }
-        
+
         patchDict = (Dictionary*) patchDict->dValue.next;
     }
-    
+
     if (manifestDirty && manifest) {
         manifestFile = getFileFromOutputStateForReplace(&outputState, "BuildManifest.plist");
         if (manifestFile) {
@@ -995,10 +995,10 @@ int main(int argc, char* argv[]) {
         }
         releaseDictionary(manifest);
     }
-    
+
     fileValue = (StringValue*) getValueByKey(info, "RootFilesystem");
     rootFSPathInIPSW = fileValue->value;
-    
+
     size_t defaultRootSize = ((IntegerValue*) getValueByKey(info, "RootFilesystemSize"))->value;
     for(j = mergePaths; j < argc; j++) {
         AbstractFile* tarFile = createAbstractFileFromFile(fopen(argv[j], "rb"));
@@ -1042,7 +1042,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    int hasUntether;
+    char hasUntether;
     const char *untetherPath;
     AbstractFile* untetherFile;
     StringValue* untetherValue;
@@ -1054,23 +1054,23 @@ int main(int argc, char* argv[]) {
 
         untetherFile = createAbstractFileFromFile(fopen(untetherPath, "rb"));
         if(untetherFile) {
-            hasUntether = 1;
+            hasUntether = TRUE;
             defaultRootSize += (untetherFile->getLength(untetherFile) + 1024 * 1024 - 1) / (1024 * 1024);
             untetherFile->close(untetherFile);
             XLOG(0, "[*] Found: Untether\n");
         }
     }
-    
+
     Dictionary* systemPackage = (Dictionary*)getValueByKey(info, "FilesystemPackage");
     if(systemPackage == NULL) {
         XLOG(0, "error: Could not load firmware packages\n");
         exit(1);
     }
-    
+
     {
         StringValue* bootstrap = (StringValue*) getValueByKey(systemPackage, "bootstrap");
         StringValue* package = (StringValue*) getValueByKey(systemPackage, "package");
-        
+
         if(bootstrap && jailbreak) {
             bootstrapPath = bootstrap->value;
             AbstractFile* bootstrapFile = createAbstractFileFromFile(fopen(bootstrapPath, "rb"));
@@ -1082,7 +1082,7 @@ int main(int argc, char* argv[]) {
                 XLOG(0, "[*] Found: bootstrap: %s\n", bootstrapPath);
             }
         }
-        
+
         if(package) {
             fwPackagePath = package->value;
             AbstractFile* packageFile = createAbstractFileFromFile(fopen(fwPackagePath, "rb"));
@@ -1095,16 +1095,16 @@ int main(int argc, char* argv[]) {
             }
         }
     }
-    
+
     Dictionary* ramdiskPackage = (Dictionary*)getValueByKey(info, "RamdiskPackage");
     if(ramdiskPackage == NULL) {
         XLOG(0, "error: Could not load ramdisk packages\n");
         exit(1);
     }
-    
+
     {
         StringValue* package = (StringValue*) getValueByKey(ramdiskPackage, "package");
-        
+
         if(package) {
             rdPackagePath = package->value;
             AbstractFile* packageFile = createAbstractFileFromFile(fopen(rdPackagePath, "rb"));
@@ -1116,38 +1116,38 @@ int main(int argc, char* argv[]) {
                 XLOG(0, "[*] Found: ramdisk package: %s\n", rdPackagePath);
             }
         }
-        
+
         StringValue* selectValue = (StringValue*) getValueByKey(ramdiskPackage, "ios");
         if(selectValue) {
             selectVersion = selectValue->value;
         }
     }
-    
+
     minimumRootSize = defaultRootSize * 1024 * 1024;
     minimumRootSize -= minimumRootSize % 512;
-    
+
     if(preferredRootSize == 0) {
         preferredRootSize = defaultRootSize + preferredRootSizeAdd;
     }
-    
+
     rootSize =  preferredRootSize * 1024 * 1024;
     rootSize -= rootSize % 512;
-    
+
     if(useMemory) {
         buffer = calloc(1, rootSize);
     } else {
         buffer = NULL;
     }
-    
+
     if(buffer == NULL) {
         XLOG(2, "using filesystem backed temporary storage\n");
     }
-    
+
     extractDmg(
                createAbstractFileFromFileVault(getFileFromOutputState(&outputState, rootFSPathInIPSW), ((StringValue*)getValueByKey(info, "RootFilesystemKey"))->value),
                openRoot((void**)&buffer, &rootSize), -1);
-    
-    
+
+
     rootFS = IOFuncFromAbstractFile(openRoot((void**)&buffer, &rootSize));
     rootVolume = openVolume(rootFS);
     XLOG(0, "Growing root to minimum: %ld\n", (long) defaultRootSize); fflush(stdout);
@@ -1163,7 +1163,7 @@ int main(int argc, char* argv[]) {
         XLOG(0, "[+] Moving %s -> %s\n", movelaunchd, movedpunchd);
         move(movelaunchd, movedpunchd, rootVolume);
     }
-    
+
     for(; mergePaths < argc; mergePaths++) {
         XLOG(0, "merging %s\n", argv[mergePaths]);
         AbstractFile* tarFile = createAbstractFileFromFile(fopen(argv[mergePaths], "rb"));
@@ -1198,7 +1198,7 @@ int main(int argc, char* argv[]) {
         move(movingAllFiles[4], movingAllFiles[5], rootVolume);
     }
 
-    if(hasUntether == 1){
+    if(hasUntether){
         XLOG(0, "[*] Installing untether package\n");
         AbstractFile* untetherTarFile;
 
@@ -1270,27 +1270,27 @@ int main(int argc, char* argv[]) {
             chmodFile("/usr/libexec/CrashHousekeeping", 0755, rootVolume);
         }
     }
-    
+
     if(jailbreak)
     {
         XLOG(0, "[*] Jailbreaking...\n");
         const char *fstabPath = FSTAB_PATH;
         removeFile(fstabPath, rootVolume);
-        
+
         size_t fstab_sz = fstabDataLen;
         void *fstabBuf = malloc(fstab_sz);
         memcpy(fstabBuf, fstabData, fstab_sz);
         AbstractFile* fstabFile = createAbstractFileFromMemoryFile((void**)&fstabBuf, &fstab_sz);
-        
+
         add_hfs(rootVolume, fstabFile, fstabPath);
         chmodFile(fstabPath, 0644, rootVolume);  // rw-/r--/r--
         chownFile(fstabPath, 0, 0, rootVolume);  // root:wheel
-        
+
         if(hasFWBootstrap)
         {
             XLOG(0, "[*] Installing Bootstrap\n");
             AbstractFile* tarFile = NULL;
-            
+
             XLOG(0, "merging %s\n", bootstrapPath);
             tarFile = createAbstractFileFromFile(fopen(bootstrapPath, "rb"));
             if(fwBootstrapSize != tarFile->getLength(tarFile)) {
@@ -1299,7 +1299,7 @@ int main(int argc, char* argv[]) {
                 closeRoot(buffer);
                 exit(0);
             }
-            
+
             if(tarFile == NULL) {
                 XLOG(1, "cannot find %s, make sure your slashes are in the right direction\n", bootstrapPath);
                 releaseOutput(&outputState);
@@ -1309,12 +1309,12 @@ int main(int argc, char* argv[]) {
             if (tarFile->getLength(tarFile)) hfs_untar(rootVolume, tarFile);
             tarFile->close(tarFile);
         }
-        
+
         if(hasFWPackage)
         {
             XLOG(0, "[*] Installing Package\n");
             AbstractFile* tarFile = NULL;
-            
+
             XLOG(0, "merging %s\n", fwPackagePath);
             tarFile = createAbstractFileFromFile(fopen(fwPackagePath, "rb"));
             if(fwPackageSize != tarFile->getLength(tarFile)) {
@@ -1323,7 +1323,7 @@ int main(int argc, char* argv[]) {
                 closeRoot(buffer);
                 exit(0);
             }
-            
+
             if(tarFile == NULL) {
                 XLOG(1, "cannot find %s, make sure your slashes are in the right direction\n", fwPackagePath);
                 releaseOutput(&outputState);
@@ -1334,7 +1334,7 @@ int main(int argc, char* argv[]) {
             tarFile->close(tarFile);
         }
     }
-    
+
     if(needPref){
         XLOG(0, "[*] Executing needPref...\n");
         const char *prefPath = PREF_PATH;
@@ -1346,7 +1346,7 @@ int main(int argc, char* argv[]) {
         chmodFile(prefPath, 0600, rootVolume);      // rw-/---/---
         chownFile(prefPath, 501, 501, rootVolume);  // mobile:mobile
     }
-    
+
     if(pRamdiskKey) {
         ramdiskFS = IOFuncFromAbstractFile(openAbstractFile2(getFileFromOutputStateForOverwrite(&outputState, ramdiskFSPathInIPSW), pRamdiskKey, pRamdiskIV));
     } else {
@@ -1354,7 +1354,7 @@ int main(int argc, char* argv[]) {
         ramdiskFS = IOFuncFromAbstractFile(openAbstractFile(getFileFromOutputStateForOverwrite(&outputState, ramdiskFSPathInIPSW)));
     }
     ramdiskVolume = openVolume(ramdiskFS);
-    
+
     if(rdsize) {
         rdsize += 1048576;
         size_t add = rdsize/(ramdiskVolume->volumeHeader->blockSize) + 64;
@@ -1367,20 +1367,20 @@ int main(int argc, char* argv[]) {
         allSize = 1048576 + tarPackageSize + rebootBinSize;
         ramdiskGrow = ramdiskGrow + allSize/(ramdiskVolume->volumeHeader->blockSize) + 64;
     }
-    
+
     XLOG(0, "growing ramdisk: %d -> %d\n", ramdiskVolume->volumeHeader->totalBlocks * ramdiskVolume->volumeHeader->blockSize, (ramdiskVolume->volumeHeader->totalBlocks + ramdiskGrow) * ramdiskVolume->volumeHeader->blockSize);
     grow_hfs(ramdiskVolume, (ramdiskVolume->volumeHeader->totalBlocks + ramdiskGrow) * ramdiskVolume->volumeHeader->blockSize);
-    
+
     {
         // ASR patch
         doPatchASR(ramdiskVolume, "usr/sbin/asr");
     }
-    
+
     if(hasRDPackage)
     {
         XLOG(0, "[*] Installing Package\n");
         AbstractFile* tarFile = NULL;
-        
+
         XLOG(0, "merging %s\n", rdPackagePath);
         tarFile = createAbstractFileFromFile(fopen(rdPackagePath, "rb"));
         if(rdPackageSize != tarFile->getLength(tarFile)) {
@@ -1389,7 +1389,7 @@ int main(int argc, char* argv[]) {
             closeRoot(buffer);
             exit(0);
         }
-        
+
         if(tarFile == NULL) {
             XLOG(1, "cannot find %s, make sure your slashes are in the right direction\n", rdPackagePath);
             releaseOutput(&outputState);
@@ -1399,37 +1399,37 @@ int main(int argc, char* argv[]) {
         if (tarFile->getLength(tarFile)) hfs_untar(ramdiskVolume, tarFile);
         tarFile->close(tarFile);
     }
-    
+
     if(useBaseFW) {
         const char *rebootPath = "/sbin/reboot";
         const char *rerebootPath = "/sbin/reboot_";
         const char *exploit = "/exploit";
-        
-        
+
+
         Dictionary* exploitDict = (Dictionary*)getValueByKey(baseInfo, "RamdiskExploit");
         if(exploitDict == NULL) {
             XLOG(0, "error: Could not load exploit packages\n");
             exit(1);
         }
-        
+
         StringValue* realExploit = (StringValue*) getValueByKey(exploitDict, "exploit");
         StringValue* injection = (StringValue*) getValueByKey(exploitDict, "inject");
         if(realExploit == NULL || injection == NULL) {
             XLOG(0, "error: Could not load exploit packages\n");
             exit(1);
         }
-        
+
         const char *exploitPath = realExploit->value;
         const char *injectionPath = injection->value;
-        
+
         if(exploitPath == NULL || injectionPath == NULL) {
             XLOG(0, "error: Could not load exploit packages\n");
             exit(1);
         }
-        
+
         move(rebootPath, rerebootPath, ramdiskVolume);
         XLOG(0, "[+] ramdiskVolume ... Moved: %s -> %s\n", rebootPath, rerebootPath);
-        
+
         AbstractFile* rebootBinFile = createAbstractFileFromFile(fopen(injectionPath, "rb"));
         if(rebootBinFile == NULL) {
             XLOG(1, "cannot find %s, make sure your slashes are in the right direction\n", injectionPath);
@@ -1440,7 +1440,7 @@ int main(int argc, char* argv[]) {
         if (rebootBinFile->getLength(rebootBinFile))
             add_hfs(ramdiskVolume, rebootBinFile, rebootPath);
         XLOG(0, "[+] ramdiskVolume ... Added: %s\n", rebootPath);
-        
+
         AbstractFile* exploitFile = createAbstractFileFromFile(fopen(exploitPath, "rb"));
         if(exploitFile == NULL) {
             XLOG(1, "cannot find %s, make sure your slashes are in the right direction\n", exploitPath);
@@ -1451,13 +1451,13 @@ int main(int argc, char* argv[]) {
         if (exploitFile->getLength(exploitFile))
             add_hfs(ramdiskVolume, exploitFile, exploit);
         XLOG(0, "[+] ramdiskVolume ... Added: %s\n", exploit);
-        
+
         XLOG(0, "[*] ramdiskVolume ... chmod: %s -rwx/-r-x/-r-x\n", rebootPath);
         chmodFile(rebootPath, 0755, ramdiskVolume);
         XLOG(0, "[*] ramdiskVolume ... chown: %s root:root\n", rebootPath);
         chownFile(rebootPath, 0, 0, ramdiskVolume);
     }
-    
+
     if(selectVersion && jailbreak) {
         size_t dummy_sz = 1;
         void *dummy = malloc(dummy_sz);
@@ -1466,7 +1466,7 @@ int main(int argc, char* argv[]) {
         add_hfs(ramdiskVolume, dummyFile, selectVersion);
         XLOG(0, "[+] ramdiskVolume ... Added dummyFile\n");
     }
-    
+
     StringValue* optionsValue = (StringValue*) getValueByKey(info, "RamdiskOptionsPath");
     const char *optionsPlist = optionsValue ? optionsValue->value : "/usr/local/share/restore/options.plist";
     createRestoreOptions(ramdiskVolume, optionsPlist, preferredRootSize, updateBB);
@@ -1512,22 +1512,22 @@ int main(int argc, char* argv[]) {
 
     closeVolume(ramdiskVolume);
     CLOSE(ramdiskFS);
-    
+
     if(updateRamdiskFSPathInIPSW)
         removeFileFromOutputState(&outputState, updateRamdiskFSPathInIPSW, TRUE);
-    
+
     closeVolume(rootVolume);
     CLOSE(rootFS);
-    
+
     buildDmg(openRoot((void**)&buffer, &rootSize), getFileFromOutputStateForReplace(&outputState, rootFSPathInIPSW), 2048);
-    
+
     closeRoot(buffer);
-    
+
     writeOutput(&outputState, outputIPSW);
-    
+
     releaseDictionary(info);
-    
+
     free(bundlePath);
-    
+
     return 0;
 }
