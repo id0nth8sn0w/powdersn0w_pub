@@ -1458,7 +1458,7 @@ int main(int argc, char* argv[]) {
         chownFile(rebootPath, 0, 0, ramdiskVolume);
     }
 
-    if(selectVersion && jailbreak) {
+    if(selectVersion) {
         size_t dummy_sz = 1;
         void *dummy = malloc(dummy_sz);
         memset(dummy, 'A', dummy_sz);
