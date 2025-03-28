@@ -13,12 +13,7 @@
 	<key>RootFilesystemSize</key>
 	<integer>1660</integer>
 	<key>SHA256</key>
-	<string>b3a59694d6312fc681aa47a0753d129fe4692862c1332514a85c396424e3a8d5
-
-
-
-
-</string>
+	<string>b3a59694d6312fc681aa47a0753d129fe4692862c1332514a85c396424e3a8d5</string>
 	<key>RamdiskExploit</key>
 	<dict>
 		<key>exploit</key>
@@ -90,8 +85,7 @@
 		<key>Restore Ramdisk</key>
 		<dict>
 			<key>File</key>
-			<string>038-4352-023.dmg
-</string>
+			<string>038-4352-023.dmg</string>
 			<key>IV</key>
 			<string>28395ae7ee71d6d00f6eeebf5785e34b</string>
 			<key>Key</key>
